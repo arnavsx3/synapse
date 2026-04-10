@@ -40,7 +40,9 @@ Synapse is a full-stack, production-style SaaS application inspired by tools lik
 ### 🗄️ Database
 
 * PostgreSQL (Neon)
+* Drizzle (orm)
 * pgvector (vector similarity search)
+
 
 ### ⚡ Caching & Queue
 
