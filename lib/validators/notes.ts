@@ -5,3 +5,13 @@ export const createNoteSchema = z.object({
   content: z.string().min(1),
   userId: z.string().uuid(),
 });
+
+export const updateNoteSchema = z.object({
+  id: z.string().uuid(),
+  title: z.string().min(1).optional(),
+  content: z.string().min(1).optional(),
+});
+
+export const deleteNoteSchema = z.object({
+  id: z.string().uuid(),
+});
