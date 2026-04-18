@@ -3,7 +3,7 @@ import {
   text,
   timestamp,
   uuid,
-  boolean,
+  integer,
   primaryKey,
 } from "drizzle-orm/pg-core";
 
@@ -11,7 +11,7 @@ export const users = pgTable("user", {
   id: uuid("id").defaultRandom().primaryKey(),
   email: text("email").notNull().unique(),
   name: text("name"),
-  emailVerified: timestamp("email_verified"),
+  emailVerified: timestamp("emailVerified"),
   image: text("image"),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -20,7 +20,7 @@ export const notes = pgTable("note", {
   id: uuid("id").defaultRandom().primaryKey(),
   title: text("title").notNull(),
   content: text("content"),
-  userId: uuid("user_id")
+  userId: uuid("userId")
     .notNull()
     .references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
@@ -30,16 +30,16 @@ export const notes = pgTable("note", {
 export const accounts = pgTable(
   "account",
   {
-    userId: uuid("user_id")
+    userId: uuid("userId")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     type: text("type").notNull(),
     provider: text("provider").notNull(),
-    providerAccountId: text("provider_account_id").notNull(),
+    providerAccountId: text("providerAccountId").notNull(),
 
     refresh_token: text("refresh_token"),
     access_token: text("access_token"),
-    expires_at: timestamp("expires_at"),
+    expires_at: integer("expires_at"),
     token_type: text("token_type"),
     scope: text("scope"),
     id_token: text("id_token"),
@@ -51,8 +51,8 @@ export const accounts = pgTable(
 );
 
 export const sessions = pgTable("session", {
-  sessionToken: text("session_token").primaryKey(),
-  userId: uuid("user_id")
+  sessionToken: text("sessionToken").primaryKey(),
+  userId: uuid("userId")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
   expires: timestamp("expires").notNull(),
