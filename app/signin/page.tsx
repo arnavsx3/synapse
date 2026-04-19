@@ -1,31 +1,20 @@
 "use client";
 
 import { useState } from "react";
-import { signup } from "@/lib/api/auth";
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
 
-export default function SignupPage() {
-  const router = useRouter();
-
+export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
 
-  const handleSignup = async (e: React.SyntheticEvent) => {
+  const handleLogin = async (e: React.SyntheticEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setError("");
 
-    try {
-      await signup({ email, password });
-      router.push("/signin");
-    } catch (err: any) {
-      setError(err?.response?.data?.message || err.message);
-    } finally {
-      setLoading(false);
-    }
+    await signIn("credentials", {
+      email,
+      password,
+      callbackUrl: "/dashboard",
+    });
   };
 
   return (
@@ -34,22 +23,19 @@ export default function SignupPage() {
         {/* Heading */}
         <div className="mb-6">
           <h1 className="text-3xl font-semibold tracking-tight">
-            Create your account
+            Welcome back
           </h1>
-          <p className="text-sm text-[#94A3B8] mt-1">
-            Start your AI workspace journey
-          </p>
+          <p className="text-sm text-[#94A3B8] mt-1">Login to your workspace</p>
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSignup} className="space-y-4">
+        <form onSubmit={handleLogin} className="space-y-4">
           <input
             type="email"
             placeholder="Email"
             className="w-full p-3 rounded-lg bg-black/30 border border-white/10 focus:outline-none focus:ring-2 focus:ring-[#6366F1] transition"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            required
           />
 
           <input
@@ -58,16 +44,10 @@ export default function SignupPage() {
             className="w-full p-3 rounded-lg bg-black/30 border border-white/10 focus:outline-none focus:ring-2 focus:ring-[#6366F1] transition"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            required
           />
 
-          {error && <p className="text-sm text-red-400">{error}</p>}
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full p-3 rounded-lg bg-[#6366F1] hover:bg-indigo-500 transition font-medium">
-            {loading ? "Creating..." : "Sign Up"}
+          <button className="w-full p-3 rounded-lg bg-[#6366F1] hover:bg-indigo-500 transition font-medium">
+            Sign in
           </button>
         </form>
 
@@ -87,9 +67,9 @@ export default function SignupPage() {
 
         {/* Footer */}
         <p className="text-sm text-center text-[#94A3B8] mt-6">
-          Already have an account?{" "}
-          <a href="/signin" className="text-[#6366F1] hover:underline">
-            Sign in
+          Don’t have an account?{" "}
+          <a href="/signup" className="text-[#6366F1] hover:underline">
+            Sign up
           </a>
         </p>
       </div>

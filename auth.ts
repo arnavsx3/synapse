@@ -7,6 +7,9 @@ import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
 import { users } from "@/lib/db/schema";
 import { loginSchema } from "@/lib/validators/auth";
+import { randomUUID } from "crypto";
+import { cookies } from "next/headers";
+import { sessions } from "@/lib/db/schema";
 
 export const { handlers, auth } = NextAuth({
   adapter: DrizzleAdapter(db),
@@ -34,11 +37,24 @@ export const { handlers, auth } = NextAuth({
         const isValid = await bcrypt.compare(password, user.password);
         if (!isValid) return null;
 
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-        };
+        const sessionToken = randomUUID();
+        const expires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+        await db.insert(sessions).values({
+          sessionToken,
+          userId: user.id,
+          expires,
+        });
+
+        const cookieStore = await cookies();
+        cookieStore.set("authjs.session-token", sessionToken, {
+          expires,
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          path: "/",
+        });
+
+        return user;
       },
     }),
   ],
