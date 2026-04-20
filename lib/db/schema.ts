@@ -17,13 +17,27 @@ export const users = pgTable("user", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const projects = pgTable("project", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  name: text("name").notNull(),
+  description: text("description"),
+  userId: uuid("userId")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 export const notes = pgTable("note", {
   id: uuid("id").defaultRandom().primaryKey(),
   title: text("title").notNull(),
   content: text("content"),
   userId: uuid("userId")
     .notNull()
-    .references(() => users.id),
+    .references(() => users.id, { onDelete: "cascade" }),
+  projectId: uuid("projectId").references(() => projects.id, {
+    onDelete: "set null",
+  }),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -70,3 +84,4 @@ export const verificationTokens = pgTable(
     pk: primaryKey(vt.identifier, vt.token),
   }),
 );
+

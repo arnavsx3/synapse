@@ -46,14 +46,15 @@ export async function POST(req: NextRequest) {
   }
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    const notes = await getNotesByUser(session.user.id);
+    const projectId = req.nextUrl.searchParams.get("projectId");
+    const notes = await getNotesByUser(session.user.id,projectId);
     return NextResponse.json({ notes });
   } catch (error) {
     console.error("Get note error:", error);
