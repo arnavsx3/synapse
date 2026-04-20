@@ -50,7 +50,7 @@ export default function LoginPage() {
           <input
             type="email"
             placeholder="Email"
-            className="w-full p-3 rounded-lg bg-black/30 border border-white/10 focus:outline-none focus:ring-2 focus:ring-[#6366F1] transition"
+            className="w-full p-3 rounded-lg bg-black/30 border border-white/10 focus:outline-none focus:ring-2 focus:ring-(--primary) transition"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
@@ -58,7 +58,7 @@ export default function LoginPage() {
           <input
             type="password"
             placeholder="Password"
-            className="w-full p-3 rounded-lg bg-black/30 border border-white/10 focus:outline-none focus:ring-2 focus:ring-[#6366F1] transition"
+            className="w-full p-3 rounded-lg bg-black/30 border border-white/10 focus:outline-none focus:ring-2 focus:ring-(--primary) transition"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
@@ -68,7 +68,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full p-3 rounded-lg bg-[#6366F1] hover:bg-indigo-500 transition font-medium disabled:opacity-60">
+            className="w-full p-3 rounded-lg bg-(--primary) hover:bg-indigo-500 transition font-medium disabled:opacity-60">
             {loading ? "Signing in..." : "Sign in"}
           </button>
         </form>
@@ -89,7 +89,7 @@ export default function LoginPage() {
         {/* Footer */}
         <p className="text-sm text-center text-[#94A3B8] mt-6">
           Don’t have an account?{" "}
-          <a href="/signup" className="text-[#6366F1] hover:underline">
+          <a href="/signup" className="text-(--primary) hover:underline">
             Sign up
           </a>
         </p>
