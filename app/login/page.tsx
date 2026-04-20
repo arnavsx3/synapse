@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { api } from "@/lib/api/client";
+import { login } from "@/lib/api/auth";
 import axios from "axios";
 
 export default function LoginPage() {
@@ -21,10 +21,7 @@ export default function LoginPage() {
     setError("");
 
     try {
-      await api.post("/signin", {
-        email,
-        password,
-      });
+      await login({ email, password });
       router.push("/dashboard");
       router.refresh();
     } catch (error) {

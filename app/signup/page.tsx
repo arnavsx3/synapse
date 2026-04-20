@@ -21,7 +21,7 @@ export default function SignupPage() {
 
     try {
       await signup({ email, password });
-      router.push("/signin");
+      router.push("/login");
     } catch (error) {
       if (axios.isAxiosError(error)) {
         setError(error.response?.data?.message || "Unable to create account");
@@ -86,7 +86,7 @@ export default function SignupPage() {
 
         {/* Google */}
         <button
-          onClick={() => signIn("google")}
+          onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
           className="w-full p-3 rounded-lg bg-white text-black font-medium hover:bg-gray-200 transition">
           Continue with Google
         </button>
@@ -94,7 +94,7 @@ export default function SignupPage() {
         {/* Footer */}
         <p className="text-sm text-center text-[#94A3B8] mt-6">
           Already have an account?{" "}
-          <a href="/signin" className="text-[#6366F1] hover:underline">
+          <a href="/login" className="text-[#6366F1] hover:underline">
             Sign in
           </a>
         </p>
