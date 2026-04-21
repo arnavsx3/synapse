@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import {
   createProject,
   getProjects,
+  updateProject,
+  deleteProject,
   type Project,
 } from "@/lib/api/projects";
 import {
@@ -47,6 +49,8 @@ export function Workspace() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
+  const [editingProjectName, setEditingProjectName] = useState("");
 
   const selectedNote =
     notes.find((note) => note.id === selectedNoteId) ?? notes[0] ?? null;
@@ -194,6 +198,57 @@ export function Workspace() {
     }
   };
 
+  const handleRenameProject = async (projectId: string) => {
+    const name = editingProjectName.trim();
+
+    if (!name) {
+      setError("Project name cannot be empty.");
+      return;
+    }
+
+    setSaving(true);
+    setError("");
+
+    try {
+      const project = await updateProject({ id: projectId, name });
+
+      setProjects((currentProjects) =>
+        currentProjects.map((currentProject) =>
+          currentProject.id === project.id ? project : currentProject,
+        ),
+      );
+
+      setEditingProjectId(null);
+      setEditingProjectName("");
+    } catch {
+      setError("Unable to rename project.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteProject = async (projectId: string) => {
+    setSaving(true);
+    setError("");
+
+    try {
+      await deleteProject(projectId);
+
+      setProjects((currentProjects) =>
+        currentProjects.filter((project) => project.id !== projectId),
+      );
+
+      if (scope === `project:${projectId}`) {
+        setScope("inbox");
+      }
+    } catch {
+      setError("Unable to delete project.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+
   return (
     <div className="grid gap-4 lg:grid-cols-[240px_minmax(260px,360px)_1fr]">
       <aside className="rounded-lg border border-white/10 bg-white/5 p-4">
@@ -295,6 +350,7 @@ export function Workspace() {
               <button
                 key={note.id}
                 type="button"
+                // crux line here lol
                 onClick={() => setSelectedNoteId(note.id)}
                 className={`w-full rounded-lg border p-3 text-left transition ${
                   selectedNote?.id === note.id
