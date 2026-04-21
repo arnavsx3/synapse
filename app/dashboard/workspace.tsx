@@ -187,6 +187,12 @@ export function Workspace() {
       return;
     }
 
+    const confirmed = window.confirm(
+      "Delete this note? This cannot be undone.",
+    );
+    if (!confirmed) {
+      return;
+    }
     setSaving(true);
     setError("");
 
@@ -234,6 +240,13 @@ export function Workspace() {
   };
 
   const handleDeleteProject = async (projectId: string) => {
+    const confirmed = window.confirm(
+      "Delete this project? Its notes will move to Inbox.",
+    );
+
+    if (!confirmed) {
+      return;
+    }
     setSaving(true);
     setError("");
 
