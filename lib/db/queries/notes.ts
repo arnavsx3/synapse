@@ -1,7 +1,6 @@
 import { db } from "../client";
-import { and, InferInsertModel, isNull } from "drizzle-orm";
+import { and, InferInsertModel, isNull, eq } from "drizzle-orm";
 import { notes } from "../schema";
-import { eq } from "drizzle-orm";
 
 type CreateNote = InferInsertModel<typeof notes>;
 type UpdateNote = Partial<Pick<CreateNote, "title" | "content" | "projectId">>;

@@ -126,6 +126,9 @@ export async function PATCH(req: NextRequest) {
       }
     }
     const updated = await updateNote(id, data, session.user.id);
+    if (!updated) {
+      return NextResponse.json({ message: "Note not found" }, { status: 404 });
+    }
     return NextResponse.json({ note: updated });
   } catch (error) {
     console.error("Update note error:", error);
@@ -154,6 +157,9 @@ export async function DELETE(req: NextRequest) {
       );
     }
     const deleted = await deleteNote(result.data.id, session.user.id);
+    if (!deleted) {
+      return NextResponse.json({ message: "Note not found" }, { status: 404 });
+    }
     return NextResponse.json({ note: deleted });
   } catch (error) {
     console.error("Delete note error:", error);
