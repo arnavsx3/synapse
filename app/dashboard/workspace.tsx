@@ -19,6 +19,8 @@ import {
 import { useWorkspaceStore } from "@/lib/store/workspace-store";
 import type { Scope } from "@/lib/store/workspace-store";
 
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+
 const getProjectIdFromScope = (scope: Scope) => {
   if (!scope.startsWith("project:")) {
     return null;
@@ -40,15 +42,6 @@ const getNotesFilterFromScope = (scope: Scope) => {
 };
 
 export function Workspace() {
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [notes, setNotes] = useState<Note[]>([]);
-  const [projectName, setProjectName] = useState("");
-  const [noteTitle, setNoteTitle] = useState("");
-  const [noteContent, setNoteContent] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
-
   const {
     scope,
     selectedNoteId,
@@ -60,6 +53,24 @@ export function Workspace() {
     setEditingProjectName,
     resetProjectEditing,
   } = useWorkspaceStore();
+
+  const queryClient = useQueryClient();
+  const { data: projects = [] } = useQuery<Project[]>({
+    queryKey: ["projects"],
+    queryFn: getProjects,
+  });
+
+  const notesFilter = getNotesFilterFromScope(scope);
+  const { data: notes = [], isLoading: loading } = useQuery<Note[]>({
+    queryKey: ["notes", notesFilter],
+    queryFn: () => getNotes(notesFilter),
+  });
+
+  const [projectName, setProjectName] = useState("");
+  const [noteTitle, setNoteTitle] = useState("");
+  const [noteContent, setNoteContent] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
   const selectedNote =
     notes.find((note) => note.id === selectedNoteId) ?? notes[0] ?? null;
@@ -75,38 +86,6 @@ export function Workspace() {
       : scope === "inbox"
         ? "Inbox"
         : (selectedProject?.name ?? "Project");
-
-  useEffect(() => {
-    const loadProjects = async () => {
-      try {
-        const projectList = await getProjects();
-        setProjects(projectList);
-      } catch {
-        setError("Unable to load projects.");
-      }
-    };
-
-    loadProjects();
-  }, []);
-
-  useEffect(() => {
-    const loadNotes = async () => {
-      setLoading(true);
-      setError("");
-
-      try {
-        const noteList = await getNotes(getNotesFilterFromScope(scope));
-        setNotes(noteList);
-        setSelectedNoteId(noteList[0]?.id ?? null);
-      } catch {
-        setError("Unable to load notes.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadNotes();
-  }, [scope, setSelectedNoteId]);
 
   useEffect(() => {
     setNoteTitle(selectedNote?.title ?? "");
@@ -126,7 +105,8 @@ export function Workspace() {
 
     try {
       const project = await createProject({ name });
-      setProjects((currentProjects) => [...currentProjects, project]);
+      await queryClient.invalidateQueries({ queryKey: ["projects"] });
+
       setProjectName("");
       setScope(`project:${project.id}`);
     } catch {
@@ -147,7 +127,8 @@ export function Workspace() {
         projectId: selectedProjectId,
       });
 
-      setNotes((currentNotes) => [note, ...currentNotes]);
+      await queryClient.invalidateQueries({ queryKey: ["notes"] });
+
       setSelectedNoteId(note.id);
     } catch {
       setError("Unable to create note.");
@@ -179,11 +160,7 @@ export function Workspace() {
         content,
       });
 
-      setNotes((currentNotes) =>
-        currentNotes.map((currentNote) =>
-          currentNote.id === note.id ? note : currentNote,
-        ),
-      );
+      await queryClient.invalidateQueries({ queryKey: ["notes"] });
     } catch {
       setError("Unable to save note.");
     } finally {
@@ -200,32 +177,12 @@ export function Workspace() {
     setError("");
 
     try {
-      const note = await updateNote({
+      await updateNote({
         id: selectedNote.id,
         projectId,
       });
 
-      setNotes((currentNotes) => {
-        const nextNotes = currentNotes.map((currentNote) =>
-          currentNote.id === note.id ? note : currentNote,
-        );
-
-        const currentFilter = getNotesFilterFromScope(scope);
-
-        if (currentFilter === null) {
-          return nextNotes;
-        }
-
-        if (currentFilter === "inbox") {
-          return nextNotes.filter(
-            (currentNote) => currentNote.projectId === null,
-          );
-        }
-
-        return nextNotes.filter(
-          (currentNote) => currentNote.projectId === currentFilter,
-        );
-      });
+      await queryClient.invalidateQueries({ queryKey: ["notes"] });
 
       if (scope !== "all") {
         setSelectedNoteId(null);
@@ -248,16 +205,16 @@ export function Workspace() {
     if (!confirmed) {
       return;
     }
+
     setSaving(true);
     setError("");
 
     try {
       await deleteNote(selectedNote.id);
-      const remainingNotes = notes.filter(
-        (note) => note.id !== selectedNote.id,
-      );
-      setNotes(remainingNotes);
-      setSelectedNoteId(remainingNotes[0]?.id ?? null);
+
+      await queryClient.invalidateQueries({ queryKey: ["notes"] });
+
+      setSelectedNoteId(null);
     } catch {
       setError("Unable to delete note.");
     } finally {
@@ -277,13 +234,9 @@ export function Workspace() {
     setError("");
 
     try {
-      const project = await updateProject({ id: projectId, name });
+      await updateProject({ id: projectId, name });
 
-      setProjects((currentProjects) =>
-        currentProjects.map((currentProject) =>
-          currentProject.id === project.id ? project : currentProject,
-        ),
-      );
+      await queryClient.invalidateQueries({ queryKey: ["projects"] });
 
       resetProjectEditing();
     } catch {
@@ -301,15 +254,15 @@ export function Workspace() {
     if (!confirmed) {
       return;
     }
+
     setSaving(true);
     setError("");
 
     try {
       await deleteProject(projectId);
 
-      setProjects((currentProjects) =>
-        currentProjects.filter((project) => project.id !== projectId),
-      );
+      await queryClient.invalidateQueries({ queryKey: ["projects"] });
+      await queryClient.invalidateQueries({ queryKey: ["notes"] });
 
       if (scope === `project:${projectId}`) {
         setScope("inbox");
