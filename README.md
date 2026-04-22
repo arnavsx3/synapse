@@ -1,4 +1,4 @@
-# 🧠 Synapse
+#  Synapse
 
 > AI-powered knowledge workspace — combining note-taking, semantic search, and real-time AI assistance.
 
@@ -6,19 +6,38 @@ Synapse is a full-stack, production-style SaaS application inspired by tools lik
 
 ---
 
-## 🚀 Features
+##  Features
 
-* ✍️ Rich note-taking & knowledge management
-* 🤖 AI-powered chat & document assistance (Groq API)
-* 🔍 Semantic search using vector embeddings (pgvector)
-* ⚡ Real-time updates with WebSockets
-* 🧠 Context-aware AI responses from user data
-* 📦 Background processing with job queues
-* 🚀 Optimized performance using caching
+* Rich note-taking & knowledge management
+* AI-powered chat & document assistance (Groq API)
+* Semantic search using vector embeddings (pgvector)
+* Real-time updates with WebSockets
+* Context-aware AI responses from user data
+* Background processing with job queues
+* Optimized performance using caching
 
 ---
 
-## 🧱 Tech Stack
+##  Tech Stack
+
+## Auth Note
+The project uses a mixed auth approach intentionally.
+
+Reason:
+- A unified NextAuth setup for both Google OAuth and email/password did not behave reliably for database-backed session creation in this project setup.
+
+Current approach:
+- Google auth uses NextAuth.
+- Email/password auth uses custom API routes and manually creates the session token in the database.
+
+Why this is acceptable:
+- The project is for learning, not for enforcing perfect architectural purity.
+- The current setup preserves progress and still teaches the important auth concepts.
+
+Tradeoff:
+- Auth flow is less unified than an ideal production setup.
+- Documentation should clearly explain this so the structure does not feel accidental later.
+
 
 ### 🖥️ Frontend
 
@@ -28,44 +47,45 @@ Synapse is a full-stack, production-style SaaS application inspired by tools lik
 * Zustand (state management)
 * Tanstack (React query)
 
-### ⚙️ Backend
+###  Backend
 
 * Next.js API Routes (or Node.js service)
 * tRPC (optional)
 * Zod (schema validation)
 
-### 🤖 AI Layer
+###  AI Layer
 
 * Groq API (LLM inference + streaming)
 
-### 🗄️ Database
+
+###  Database
 
 * PostgreSQL (Neon)
 * Drizzle (orm)
 * pgvector (vector similarity search)
 
 
-### ⚡ Caching & Queue
+###  Caching & Queue
 
 * Redis (Upstash)
 * BullMQ (background jobs & workers)
 
-### 🔌 Real-Time
+###  Real-Time
 
 * WebSockets / Socket.IO
 
-### 🔐 Authentication
+###  Authentication
 
 * NextAuth / Clerk
 
-### 🐳 DevOps
+###  DevOps
 
 * Docker
 * Docker Compose
 
 ---
 
-## 🧠 Architecture Overview
+##  Architecture Overview
 
 Client (Next.js)
 ↓
@@ -81,9 +101,9 @@ Infrastructure (Neon + Redis)
 
 ---
 
-## 🔁 Core Workflows
+##  Core Workflows
 
-### 📝 Note Processing
+###  Note Processing
 
 1. User creates a note
 2. Stored in PostgreSQL
@@ -92,7 +112,7 @@ Infrastructure (Neon + Redis)
 
 ---
 
-### 🤖 AI Query Flow
+###  AI Query Flow
 
 1. User asks a question
 2. Relevant notes retrieved via vector search
@@ -101,7 +121,7 @@ Infrastructure (Neon + Redis)
 
 ---
 
-## 🛠️ Setup (Local Development)
+##  Setup (Local Development)
 
 ```bash
 # clone repo
@@ -118,7 +138,7 @@ npm run dev
 
 ---
 
-## ⚙️ Environment Variables
+##  Environment Variables
 
 Create a `.env` file:
 
@@ -131,7 +151,7 @@ NEXTAUTH_SECRET=
 
 ---
 
-## 🐳 Docker (optional)
+##  Docker (optional)
 
 ```bash
 docker-compose up --build
@@ -139,7 +159,7 @@ docker-compose up --build
 
 ---
 
-## 📈 Future Improvements
+##  Future Improvements
 
 * Multi-tenant workspaces
 * Role-based access control
@@ -149,18 +169,18 @@ docker-compose up --build
 
 ---
 
-## 🤝 Contributing
+##  Contributing
 
 This is a personal portfolio project, but suggestions and feedback are welcome.
 
 ---
 
-## 📜 License
+##  License
 
 MIT License
 
 ---
 
-## ⭐ Acknowledgements
+##  Acknowledgements
 
 Inspired by modern AI-native tools like Notion, ChatGPT, and knowledge graphs.
