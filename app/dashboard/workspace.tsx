@@ -115,6 +115,80 @@ export function Workspace() {
     },
   });
 
+  const createNoteMutation = useMutation({
+    mutationFn: createNote,
+    onMutate: () => {
+      setError("");
+      setSaving(true);
+    },
+    onSuccess: async (note) => {
+      await queryClient.invalidateQueries({ queryKey: ["notes"] });
+      setSelectedNoteId(note.id);
+    },
+    onError: () => {
+      setError("Unable to create note.");
+    },
+    onSettled: () => {
+      setSaving(false);
+    },
+  });
+
+  const saveNoteMutation = useMutation({
+    mutationFn: updateNote,
+    onMutate: () => {
+      setError("");
+      setSaving(true);
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["notes"] });
+    },
+    onError: () => {
+      setError("Unable to save note.");
+    },
+    onSettled: () => {
+      setSaving(false);
+    },
+  });
+
+  const moveNoteMutation = useMutation({
+    mutationFn: updateNote,
+    onMutate: () => {
+      setError("");
+      setSaving(true);
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["notes"] });
+
+      if (scope !== "all") {
+        setSelectedNoteId(null);
+      }
+    },
+    onError: () => {
+      setError("Unable to move note.");
+    },
+    onSettled: () => {
+      setSaving(false);
+    },
+  });
+
+  const deleteNoteMutation = useMutation({
+    mutationFn: deleteNote,
+    onMutate: () => {
+      setError("");
+      setSaving(true);
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["notes"] });
+      setSelectedNoteId(null);
+    },
+    onError: () => {
+      setError("Unable to delete note.");
+    },
+    onSettled: () => {
+      setSaving(false);
+    },
+  });
+
   const { data: projects = [] } = useQuery<Project[]>({
     queryKey: ["projects"],
     queryFn: getProjects,
@@ -162,112 +236,6 @@ export function Workspace() {
     createProjectMutation.mutate({ name });
   };
 
-  const handleCreateNote = async () => {
-    setSaving(true);
-    setError("");
-
-    try {
-      const note = await createNote({
-        title: "Untitled note",
-        content: "Start writing...",
-        projectId: selectedProjectId,
-      });
-
-      await queryClient.invalidateQueries({ queryKey: ["notes"] });
-
-      setSelectedNoteId(note.id);
-    } catch {
-      setError("Unable to create note.");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleSaveNote = async () => {
-    if (!selectedNote) {
-      return;
-    }
-
-    const title = noteTitle.trim();
-    const content = noteContent.trim();
-
-    if (!title || !content) {
-      setError("A note needs both a title and content.");
-      return;
-    }
-
-    setSaving(true);
-    setError("");
-
-    try {
-      await updateNote({
-        id: selectedNote.id,
-        title,
-        content,
-      });
-
-      await queryClient.invalidateQueries({ queryKey: ["notes"] });
-    } catch {
-      setError("Unable to save note.");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleMoveNote = async (projectId: string | null) => {
-    if (!selectedNote) {
-      return;
-    }
-
-    setSaving(true);
-    setError("");
-
-    try {
-      await updateNote({
-        id: selectedNote.id,
-        projectId,
-      });
-
-      await queryClient.invalidateQueries({ queryKey: ["notes"] });
-
-      if (scope !== "all") {
-        setSelectedNoteId(null);
-      }
-    } catch {
-      setError("Unable to move note.");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleDeleteNote = async () => {
-    if (!selectedNote) {
-      return;
-    }
-
-    const confirmed = window.confirm(
-      "Delete this note? This cannot be undone.",
-    );
-    if (!confirmed) {
-      return;
-    }
-
-    setSaving(true);
-    setError("");
-
-    try {
-      await deleteNote(selectedNote.id);
-
-      await queryClient.invalidateQueries({ queryKey: ["notes"] });
-
-      setSelectedNoteId(null);
-    } catch {
-      setError("Unable to delete note.");
-    } finally {
-      setSaving(false);
-    }
-  };
-
   const handleRenameProject = async (projectId: string) => {
     const name = editingProjectName.trim();
 
@@ -288,6 +256,65 @@ export function Workspace() {
     }
 
     deleteProjectMutation.mutate(projectId);
+  };
+
+  const handleCreateNote = async (event: React.SyntheticEvent) => {
+    event.preventDefault();
+    setSaving(true);
+    setError("");
+
+    createNoteMutation.mutate({
+      title: "Untitled note",
+      content: "Start writing...",
+      projectId: selectedProjectId,
+    });
+  };
+
+  const handleSaveNote = async (event: React.SyntheticEvent) => {
+    event.preventDefault();
+    if (!selectedNote) {
+      return;
+    }
+
+    const title = noteTitle.trim();
+    const content = noteContent.trim();
+
+    if (!title || !content) {
+      setError("A note needs both a title and content.");
+      return;
+    }
+
+    saveNoteMutation.mutate({
+      id: selectedNote.id,
+      title,
+      content,
+    });
+  };
+
+  const handleMoveNote = async (projectId: string | null) => {
+    if (!selectedNote) {
+      return;
+    }
+
+    moveNoteMutation.mutate({
+      id: selectedNote.id,
+      projectId,
+    });
+  };
+
+  const handleDeleteNote = async () => {
+    if (!selectedNote) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "Delete this note? This cannot be undone.",
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    deleteNoteMutation.mutate(selectedNote.id);
   };
 
   return (
