@@ -42,6 +42,26 @@ export const notes = pgTable("note", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+export const chats = pgTable("chat", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  title: text("title").notNull().default("New Chat"),
+  userId: uuid("userId")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const chatMessages = pgTable("chat_message", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  chatId: uuid("chatId")
+    .notNull()
+    .references(() => chats.id, { onDelete: "cascade" }),
+  role: text("role").notNull().$type<"user" | "assistant">(),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const accounts = pgTable(
   "account",
   {
