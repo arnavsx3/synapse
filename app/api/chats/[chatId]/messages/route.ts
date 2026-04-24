@@ -13,7 +13,10 @@ import {
 } from "@/lib/validators/chats";
 import axios from "axios";
 
-export async function GET(context: { params: Promise<{ chatId: string }> }) {
+export async function GET(
+  _req: NextRequest,
+  context: { params: Promise<{ chatId: string }> },
+) {
   try {
     const session = await auth();
     if (!session?.user?.id) {

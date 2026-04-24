@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  QueryClient,
   useMutation,
   useQuery,
   useQueryClient,
@@ -72,8 +71,13 @@ export function AssistantWorkspace() {
         queryKey: ["chat-messages", variables.chatId],
       });
     },
-    onError: () => {
-      setError("Unable to get a response right now.");
+    onError: async (_error,variables) => {
+       setError("Your message was saved, but the assistant reply failed.");
+
+       await queryClient.invalidateQueries({ queryKey: ["chats"] });
+       await queryClient.invalidateQueries({
+         queryKey: ["chat-messages", variables.chatId],
+       });
     },
   });
 
