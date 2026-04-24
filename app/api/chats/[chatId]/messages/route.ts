@@ -148,7 +148,7 @@ export async function POST(
     if (chat.title === "New Chat") {
       await updateChatTitle(
         chat.id,
-        userMessageText.slice(0, 60).replace(/\s+\S*$/, ""),
+        userMessageText.slice(0, 20).replace(/\s+\S*$/, ""),
         session.user.id,
       );
     } else {
