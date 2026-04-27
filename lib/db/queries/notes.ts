@@ -13,6 +13,20 @@ import { notes } from "../schema";
 type CreateNote = InferInsertModel<typeof notes>;
 type UpdateNote = Partial<Pick<CreateNote, "title" | "content" | "projectId">>;
 
+export type RelevantNote = {
+  id: string;
+  title: string;
+  content: string | null;
+  projectId: string | null;
+  projectName: string | null;
+  createdAt: Date | null;
+  updatedAt: Date | null;
+  score: number;
+};
+
+const normalizeText = (value: string) =>
+  value.toLowerCase().replace(/\s+/g, " ").trim();
+
 const buildQueryTerms = (query: string) => {
   return Array.from(
     new Set(
@@ -22,6 +36,27 @@ const buildQueryTerms = (query: string) => {
         .filter((term) => term.length >= 3),
     ),
   ).slice(0, 20);
+};
+
+const countOccurrences = (text: string, term: string) => {
+  if (!text || !term) {
+    return 0;
+  }
+
+  let count = 0;
+  let startIndex = 0;
+
+  while (true) {
+    const matchIndex = text.indexOf(term, startIndex);
+    if (matchIndex === -1) {
+      break;
+    }
+
+    count += 1;
+    startIndex = matchIndex + term.length;
+  }
+
+  return count;
 };
 
 export const createNote = async (data: CreateNote) => {
