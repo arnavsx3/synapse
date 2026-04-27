@@ -7,34 +7,85 @@ import {
   touchChat,
   updateChatTitle,
 } from "@/lib/db/queries/chats";
-import { getRelevantNotesByUser } from "@/lib/db/queries/notes";
+import {
+  getRelevantNotesByUser,
+  type RelevantNote,
+} from "@/lib/db/queries/notes";
 import {
   chatParamsSchema,
   sendChatMessageSchema,
 } from "@/lib/validators/chats";
 import axios from "axios";
 
-const formatRelevantNotes = (
-  relevantNotes: Awaited<ReturnType<typeof getRelevantNotesByUser>>,
-) => {
+const MAX_NOTE_CONTENT_LENGTH = 500;
+
+const buildNoteExcerpt = (content: string | null) => {
+  const normalized = (content ?? "").replace(/\s+/g, " ").trim();
+
+  if (!normalized) {
+    return "Empty note";
+  }
+
+  if (normalized.length <= MAX_NOTE_CONTENT_LENGTH) {
+    return normalized;
+  }
+
+  return `${normalized.slice(0, MAX_NOTE_CONTENT_LENGTH)}...`;
+};
+
+const formatRelevantNotes = (relevantNotes: RelevantNote[]) => {
   if (relevantNotes.length === 0) {
     return "No relevant user notes were found.";
   }
 
   return relevantNotes
     .map((note, index) => {
-      const normalizedContent = (note.content ?? "")
-        .replace(/\s+/g, " ")
-        .trim()
-        .slice(0, 600);
+      const location = note.projectName
+        ? `Project: ${note.projectName}`
+        : "Project: Inbox";
 
       return [
         `Note ${index + 1}`,
         `Title: ${note.title}`,
-        `Content: ${normalizedContent || "Empty note"}`,
+        location,
+        `Match Score: ${note.score}`,
+        `Content: ${buildNoteExcerpt(note.content)}`,
       ].join("\n");
     })
     .join("\n\n");
+};
+
+const buildSystemMessages = (
+  noteContext: string,
+  hasRelevantNotes: boolean,
+) => {
+  return [
+    {
+      role: "system" as const,
+      content: [
+        "You are Synapse, a helpful AI assistant inside a personal knowledge workspace.",
+        "Your main job is to help the user think with their saved notes.",
+        "Be clear, practical, and concise.",
+      ].join(" "),
+    },
+    {
+      role: "system" as const,
+      content: hasRelevantNotes
+        ? [
+            "Use the retrieved notes below as your primary grounding context when they are relevant.",
+            "Prefer note-supported answers over generic advice.",
+            "If the notes only partially support the answer, say what is supported and what is not.",
+            "Do not pretend the notes contain facts they do not contain.",
+            "",
+            "Retrieved notes:",
+            noteContext,
+          ].join("\n")
+        : [
+            "No strong note context was found for this message.",
+            "You may still help generally, but be explicit that the answer is not grounded in saved notes.",
+          ].join("\n"),
+    },
+  ];
 };
 
 export async function GET(
@@ -134,42 +185,33 @@ export async function POST(
       5,
     );
 
-    const noteContext = formatRelevantNotes(relevantNotes);
+    const strongNotes = relevantNotes.filter((note) => note.score > 0);
+    const noteContext = formatRelevantNotes(strongNotes);
+    const systemMessages = buildSystemMessages(
+      noteContext,
+      strongNotes.length > 0,
+    );
 
-     const groqResponse = await axios.post(
-       "https://api.groq.com/openai/v1/chat/completions",
-       {
-         model: "llama-3.3-70b-versatile",
-         temperature: 0.7,
-         messages: [
-           {
-             role: "system",
-             content:
-               "You are Synapse, a helpful AI assistant inside a knowledge workspace. Keep responses clear, useful, and concise.",
-           },
-           {
-             role: "system",
-             content: [
-               "The following user notes are the primary context for this reply.",
-               "Use them when relevant.",
-               "If the answer is not supported by the notes, say that clearly instead of pretending the notes contain it.",
-               "",
-               noteContext,
-             ].join("\n"),
-           },
-           ...history.map((message) => ({
-             role: message.role,
-             content: message.content,
-           })),
-         ],
-       },
-       {
-         headers: {
-           "Content-Type": "application/json",
-           Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
-         },
-       },
-     );
+    const groqResponse = await axios.post(
+      "https://api.groq.com/openai/v1/chat/completions",
+      {
+        model: "llama-3.3-70b-versatile",
+        temperature: 0.4,
+        messages: [
+          ...systemMessages,
+          ...history.map((message) => ({
+            role: message.role,
+            content: message.content,
+          })),
+        ],
+      },
+      {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
+        },
+      },
+    );
 
     const groqData = await groqResponse.data;
     if (!groqData) {
