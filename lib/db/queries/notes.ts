@@ -8,7 +8,7 @@ import {
   or,
 } from "drizzle-orm";
 import { db } from "../client";
-import { notes } from "../schema";
+import { notes,projects } from "../schema";
 
 type CreateNote = InferInsertModel<typeof notes>;
 type UpdateNote = Partial<Pick<CreateNote, "title" | "content" | "projectId">>;
@@ -59,6 +59,61 @@ const countOccurrences = (text: string, term: string) => {
   return count;
 };
 
+const scoreNoteAgainstQuery = (
+  note: {
+    title: string;
+    content: string | null;
+    projectName: string | null;
+    updatedAt: Date | null;
+  },
+  rawQuery: string,
+  terms: string[],
+) => {
+  const normalizedQuery = normalizeText(rawQuery);
+  const title = normalizeText(note.title);
+  const content = normalizeText(note.content ?? "");
+  const projectName = normalizeText(note.projectName ?? "");
+
+  let score = 0;
+
+  if (normalizedQuery) {
+    if (title.includes(normalizedQuery)) {
+      score += 18;
+    }
+
+    if (projectName && projectName.includes(normalizedQuery)) {
+      score += 12;
+    }
+
+    if (content.includes(normalizedQuery)) {
+      score += 10;
+    }
+  }
+
+  for (const term of terms) {
+    score += countOccurrences(title, term) * 5;
+    score += countOccurrences(projectName, term) * 4;
+    score += countOccurrences(content, term) * 2;
+
+    if (title.startsWith(term)) {
+      score += 2;
+    }
+  }
+
+  if (note.updatedAt) {
+    const ageInDays =
+      (Date.now() - note.updatedAt.getTime()) / (1000 * 60 * 60 * 24);
+
+    if (ageInDays <= 7) {
+      score += 2;
+    } else if (ageInDays <= 30) {
+      score += 1;
+    }
+  }
+
+  return score;
+};
+
 export const createNote = async (data: CreateNote) => {
   const [note] = await db.insert(notes).values(data).returning();
   return note;
@@ -89,40 +144,94 @@ export const getRelevantNotesByUser = async (
   userId: string,
   query: string,
   limit = 5,
-) => {
+): Promise<RelevantNote[]> => {
   const terms = buildQueryTerms(query);
 
-  if (terms.length === 0) {
-    return await db
-      .select()
-      .from(notes)
-      .where(eq(notes.userId, userId))
-      .orderBy(desc(notes.updatedAt), desc(notes.createdAt))
-      .limit(limit);
-  }
+   if (terms.length === 0) {
+     const recentNotes = await db
+       .select({
+         id: notes.id,
+         title: notes.title,
+         content: notes.content,
+         projectId: notes.projectId,
+         projectName: projects.name,
+         createdAt: notes.createdAt,
+         updatedAt: notes.updatedAt,
+       })
+       .from(notes)
+       .leftJoin(projects, eq(notes.projectId, projects.id))
+       .where(eq(notes.userId, userId))
+       .orderBy(desc(notes.updatedAt), desc(notes.createdAt))
+       .limit(limit);
+
+     return recentNotes.map((note) => ({
+       ...note,
+       score: 0,
+     }));
+   }
 
   const conditions = terms.flatMap((term) => [
     ilike(notes.title, `%${term}%`),
     ilike(notes.content, `%${term}%`),
+    ilike(projects.name, `%${term}%`),
   ]);
 
-  const matchedNotes = await db
-    .select()
-    .from(notes)
-    .where(and(eq(notes.userId, userId), or(...conditions)))
-    .orderBy(desc(notes.updatedAt), desc(notes.createdAt))
-    .limit(limit);
+    const candidateNotes = await db
+      .select({
+        id: notes.id,
+        title: notes.title,
+        content: notes.content,
+        projectId: notes.projectId,
+        projectName: projects.name,
+        createdAt: notes.createdAt,
+        updatedAt: notes.updatedAt,
+      })
+      .from(notes)
+      .leftJoin(projects, eq(notes.projectId, projects.id))
+      .where(and(eq(notes.userId, userId), or(...conditions)))
+      .orderBy(desc(notes.updatedAt), desc(notes.createdAt))
+      .limit(25);
 
-  if (matchedNotes.length > 0) {
-    return matchedNotes;
-  }
+    const scoredNotes = candidateNotes
+      .map((note) => ({
+        ...note,
+        score: scoreNoteAgainstQuery(note, query, terms),
+      }))
+      .sort((a, b) => {
+        if (b.score !== a.score) {
+          return b.score - a.score;
+        }
 
-  return await db
-    .select()
+        const aTime = a.updatedAt?.getTime() ?? 0;
+        const bTime = b.updatedAt?.getTime() ?? 0;
+        return bTime - aTime;
+      })
+      .slice(0, limit);
+
+    if (scoredNotes.length > 0) {
+      return scoredNotes;
+    }
+
+  const fallbackNotes = await db
+    .select({
+      id: notes.id,
+      title: notes.title,
+      content: notes.content,
+      projectId: notes.projectId,
+      projectName: projects.name,
+      createdAt: notes.createdAt,
+      updatedAt: notes.updatedAt,
+    })
     .from(notes)
+    .leftJoin(projects, eq(notes.projectId, projects.id))
     .where(eq(notes.userId, userId))
     .orderBy(desc(notes.updatedAt), desc(notes.createdAt))
     .limit(limit);
+
+  return fallbackNotes.map((note) => ({
+    ...note,
+    score: 0,
+  }));
 };
 
 export const updateNote = async (
