@@ -74,3 +74,12 @@ export const touchChat = async (id: string, userId: string) => {
 
   return chat;
 };
+
+export const deleteChat = async (id: string, userId: string) => {
+  const [chat] = await db
+    .delete(chats)
+    .where(and(eq(chats.id, id), eq(chats.userId, userId)))
+    .returning();
+
+  return chat;
+};

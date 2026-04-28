@@ -20,6 +20,11 @@ type CreateChatInput = {
   title?: string;
 };
 
+type UpdateChatInput = {
+  id: string;
+  title: string;
+};
+
 type SendChatMessageInput = {
   message: string;
 };
@@ -36,6 +41,19 @@ export const getChats = async () => {
 
 export const createChat = async (data: CreateChatInput = {}) => {
   const response = await api.post<{ chat: Chat }>("/chats", data);
+  return response.data.chat;
+};
+
+export const updateChat = async (data: UpdateChatInput) => {
+  const response = await api.patch<{ chat: Chat }>("/chats", data);
+  return response.data.chat;
+};
+
+export const deleteChat = async (id: string) => {
+  const response = await api.delete<{ chat: Chat }>("/chats", {
+    data: { id },
+  });
+
   return response.data.chat;
 };
 
