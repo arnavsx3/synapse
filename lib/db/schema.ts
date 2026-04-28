@@ -1,3 +1,5 @@
+import { sql } from "drizzle-orm";
+import { vector } from "drizzle-orm/pg-core";
 import {
   pgTable,
   text,
@@ -5,6 +7,7 @@ import {
   uuid,
   integer,
   primaryKey,
+  index,
 } from "drizzle-orm/pg-core";
 
 export const users = pgTable("user", {
@@ -105,3 +108,22 @@ export const verificationTokens = pgTable(
   }),
 );
 
+export const noteEmbeddings = pgTable(
+  "note_embedding",
+  {
+    noteId: uuid("noteId")
+      .notNull()
+      .primaryKey()
+      .references(() => notes.id, { onDelete: "cascade" }),
+    userId: uuid("userId")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    embedding: vector("embedding", { dimensions: 768 }),
+    sourceText: text("source_text").notNull(),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (table) => ({
+    userIdIdx: index("note_embedding_user_id_idx").on(table.userId),
+  }),
+);
