@@ -1,4 +1,4 @@
-import { api } from "../api/client";
+import axios from "axios";
 
 const EMBEDDING_DIMENSIONS = Number(process.env.EMBEDDING_DIMENSIONS ?? 768);
 
@@ -8,27 +8,27 @@ function normalizeEmbeddingInput(text: string) {
 
 export async function embedText(text: string) {
   const input = normalizeEmbeddingInput(text);
+
   if (!input) {
     throw new Error("Cannot embed empty text.");
   }
 
   try {
-    const response = await api.post(
+    const response = await axios.post(
       process.env.EMBEDDING_API_URL!,
       {
-        model: process.env.EMBEDDING_MODEL!,
-        input,
+        inputs: input,
       },
       {
         headers: {
-          "Content-Type": "application/json",
           Authorization: `Bearer ${process.env.EMBEDDING_API_KEY!}`,
+          "Content-Type": "application/json",
         },
       },
     );
 
     const data = response.data;
-    const embedding = data?.data?.[0]?.embedding;
+    const embedding = Array.isArray(data?.[0]) ? data[0] : data;
 
     if (!Array.isArray(embedding)) {
       throw new Error("Embedding response did not contain a valid vector.");
@@ -42,7 +42,11 @@ export async function embedText(text: string) {
 
     return embedding as number[];
   } catch (error: any) {
-    const errorText = error.response?.data || error.message;
+    const errorText =
+      typeof error?.response?.data === "string"
+        ? error.response.data
+        : JSON.stringify(error?.response?.data ?? error.message);
+
     throw new Error(`Embedding request failed: ${errorText}`);
   }
 }
