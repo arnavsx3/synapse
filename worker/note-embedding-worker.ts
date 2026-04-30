@@ -20,12 +20,12 @@ export const noteEmbeddingWorker = new Worker<NoteEmbeddingJobData>(
 );
 
 noteEmbeddingWorker.on("completed", (job) => {
-  console.log(`Embedding job completed: ${job.id} for note ${job.data.noteId}`);
+  console.log(`Embedding job completed: ${job.id}`);
 });
 
 noteEmbeddingWorker.on("failed", (job, error) => {
   console.error(
-    `Embedding job failed: ${job?.id} for note ${job?.data.noteId}`,
+    `Embedding job failed: ${job?.id}`,
     error,
   );
 });

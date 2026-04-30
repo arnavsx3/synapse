@@ -9,7 +9,7 @@ export async function enqueueNoteEmbeddingJob(
   data: EnqueueNoteEmbeddingJobInput,
 ) {
   await noteEmbeddingQueue.add("embed-note", data, {
-    jobId: `note:${data.noteId}`,
+    jobId: data.noteId,
     attempts: 3,
     backoff: {
       type: "exponential",
