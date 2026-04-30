@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const EMBEDDING_DIMENSIONS = Number(process.env.EMBEDDING_DIMENSIONS ?? 768);
+const EMBEDDING_DIMENSIONS = Number(process.env.EMBEDDING_DIMENSIONS ?? 384);
 
 function normalizeEmbeddingInput(text: string) {
   return text.replace(/\s+/g, " ").trim().slice(0, 8000);

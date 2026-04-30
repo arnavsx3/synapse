@@ -15,7 +15,7 @@ import {
 
 import { z } from "zod";
 import { getProjectByUser } from "@/lib/db/queries/projects";
-import { syncNoteEmbeddingByNoteId } from "@/lib/ai/note-embeddings";
+import { enqueueNoteEmbeddingJob } from "@/lib/queue/note-embedding";
 
 const noteProjectFilterSchema = z
   .union([z.literal("inbox"), z.uuid()])
@@ -58,9 +58,12 @@ export async function POST(req: NextRequest) {
     });
 
     try {
-      await syncNoteEmbeddingByNoteId(note.id, session.user.id);
-    } catch (embeddingError) {
-      console.error("Create note embedding sync error:", embeddingError);
+      await enqueueNoteEmbeddingJob({
+        noteId: note.id,
+        userId: session.user.id,
+      });
+    } catch (queueError) {
+      console.error("Create note embedding queue error:", queueError);
     }
 
     return NextResponse.json({ note });
@@ -138,9 +141,12 @@ export async function PATCH(req: NextRequest) {
     }
 
     try {
-      await syncNoteEmbeddingByNoteId(updated.id, session.user.id);
-    } catch (embeddingError) {
-      console.error("Update note embedding sync error:", embeddingError);
+      await enqueueNoteEmbeddingJob({
+        noteId: updated.id,
+        userId: session.user.id,
+      });
+    } catch (queueError) {
+      console.error("Update note embedding queue error:", queueError);
     }
 
     return NextResponse.json({ note: updated });

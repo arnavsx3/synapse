@@ -6,6 +6,8 @@ import {
 import { createWorkerConnection } from "@/lib/queue/connection";
 import { syncNoteEmbeddingByNoteId } from "@/lib/ai/note-embeddings";
 
+console.log("Worker started...");
+
 export const noteEmbeddingWorker = new Worker<NoteEmbeddingJobData>(
   NOTE_EMBEDDING_QUEUE_NAME,
   async (job) => {
