@@ -11,6 +11,7 @@ import {
   deleteChatSchema,
   updateChatSchema,
 } from "@/lib/validators/chats";
+import { emitChatChanged } from "@/lib/realtime/emitter";
 
 export async function GET() {
   try {
@@ -50,6 +51,12 @@ export async function POST(req: NextRequest) {
       title: result.data.title?.trim() || "New Chat",
     });
 
+    emitChatChanged(session.user.id, {
+      action: "created",
+      chatId: chat.id,
+      occurredAt: new Date().toISOString(),
+    });
+
     return NextResponse.json({ chat }, { status: 201 });
   } catch (error) {
     console.error("Create chat error:", error);
@@ -85,6 +92,12 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ message: "Chat not found" }, { status: 404 });
     }
 
+    emitChatChanged(session.user.id, {
+      action: "updated",
+      chatId: chat.id,
+      occurredAt: new Date().toISOString(),
+    });
+
     return NextResponse.json({ chat });
   } catch (error) {
     console.error("Update chat error:", error);
@@ -115,6 +128,12 @@ export async function DELETE(req: NextRequest) {
     if (!chat) {
       return NextResponse.json({ message: "Chat not found" }, { status: 404 });
     }
+
+    emitChatChanged(session.user.id, {
+      action: "deleted",
+      chatId: chat.id,
+      occurredAt: new Date().toISOString(),
+    });
 
     return NextResponse.json({ chat });
   } catch (error) {

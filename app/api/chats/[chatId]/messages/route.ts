@@ -14,6 +14,10 @@ import {
   sendChatMessageSchema,
 } from "@/lib/validators/chats";
 import axios from "axios";
+import {
+  emitChatChanged,
+  emitChatMessageCreated,
+} from "@/lib/realtime/emitter";
 
 const formatRelevantNotes = (
   relevantNotes: Awaited<ReturnType<typeof getSemanticRelevantNotesByUser>>,
@@ -80,12 +84,16 @@ export async function POST(
   context: { params: Promise<{ chatId: string }> },
 ) {
   let chatId: string | null = null;
+  let sessionUserId: string | null = null;
+
   try {
     const session = await auth();
 
     if (!session?.user?.id) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
+
+    sessionUserId = session.user.id;
 
     const params = await context.params;
     const paramsResult = chatParamsSchema.safeParse(params);
@@ -119,10 +127,17 @@ export async function POST(
 
     const userMessageText = bodyResult.data.message.trim();
 
-    await addChatMessage({
+    const userMessage = await addChatMessage({
       chatId: chat.id,
       role: "user",
       content: userMessageText,
+    });
+
+    emitChatMessageCreated(session.user.id, {
+      chatId: chat.id,
+      messageId: userMessage.id,
+      role: "user",
+      occurredAt: new Date().toISOString(),
     });
 
     const history = await getChatMessagesByUser(chat.id, session.user.id);
@@ -203,6 +218,13 @@ export async function POST(
       content: assistantReply,
     });
 
+    emitChatMessageCreated(session.user.id, {
+      chatId: chat.id,
+      messageId: assistantMessage.id,
+      role: "assistant",
+      occurredAt: new Date().toISOString(),
+    });
+
     if (chat.title === "New Chat") {
       await updateChatTitle(
         chat.id,
@@ -213,6 +235,12 @@ export async function POST(
       await touchChat(chat.id, session.user.id);
     }
 
+    emitChatChanged(session.user.id, {
+      action: "updated",
+      chatId: chat.id,
+      occurredAt: new Date().toISOString(),
+    });
+
     return NextResponse.json({
       reply: assistantReply,
       assistantMessage,
@@ -221,11 +249,26 @@ export async function POST(
     console.error("Send chat message error:", error);
 
     if (chatId) {
-      await addChatMessage({
+      const fallbackMessage = await addChatMessage({
         chatId,
         role: "assistant",
         content: "I couldn't generate a response right now. Please try again.",
       });
+
+      if (sessionUserId) {
+        emitChatMessageCreated(sessionUserId, {
+          chatId,
+          messageId: fallbackMessage.id,
+          role: "assistant",
+          occurredAt: new Date().toISOString(),
+        });
+
+        emitChatChanged(sessionUserId, {
+          action: "updated",
+          chatId,
+          occurredAt: new Date().toISOString(),
+        });
+      }
     }
 
     return NextResponse.json(

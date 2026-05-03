@@ -16,6 +16,7 @@ import {
 import { z } from "zod";
 import { getProjectByUser } from "@/lib/db/queries/projects";
 import { enqueueNoteEmbeddingJob } from "@/lib/queue/note-embedding";
+import { emitNoteChanged } from "@/lib/realtime/emitter";
 
 const noteProjectFilterSchema = z
   .union([z.literal("inbox"), z.uuid()])
@@ -65,6 +66,13 @@ export async function POST(req: NextRequest) {
     } catch (queueError) {
       console.error("Create note embedding queue error:", queueError);
     }
+
+    emitNoteChanged(session.user.id, {
+      action: "created",
+      noteId: note.id,
+      projectId: note.projectId ?? null,
+      occurredAt: new Date().toISOString(),
+    });
 
     return NextResponse.json({ note });
   } catch (error) {
@@ -149,6 +157,13 @@ export async function PATCH(req: NextRequest) {
       console.error("Update note embedding queue error:", queueError);
     }
 
+    emitNoteChanged(session.user.id, {
+      action: "updated",
+      noteId: updated.id,
+      projectId: updated.projectId ?? null,
+      occurredAt: new Date().toISOString(),
+    });
+
     return NextResponse.json({ note: updated });
   } catch (error) {
     console.error("Update note error:", error);
@@ -180,6 +195,14 @@ export async function DELETE(req: NextRequest) {
     if (!deleted) {
       return NextResponse.json({ message: "Note not found" }, { status: 404 });
     }
+
+    emitNoteChanged(session.user.id, {
+      action: "deleted",
+      noteId: deleted.id,
+      projectId: deleted.projectId ?? null,
+      occurredAt: new Date().toISOString(),
+    });
+
     return NextResponse.json({ note: deleted });
   } catch (error) {
     console.error("Delete note error:", error);

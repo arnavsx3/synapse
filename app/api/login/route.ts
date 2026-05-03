@@ -5,16 +5,12 @@ import { eq } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { sessions, users } from "@/lib/db/schema";
 import { loginSchema } from "@/lib/validators/auth";
+import {
+  getSessionCookieName,
+  shouldUseSecureCookies,
+} from "@/lib/auth/session";
 
 const SESSION_MAX_AGE_SECONDS = 30 * 24 * 60 * 60;
-
-function shouldUseSecureCookies() {
-  return process.env.NEXTAUTH_URL?.startsWith("https://") ?? false;
-}
-
-function getSessionCookieName() {
-  return `${shouldUseSecureCookies() ? "__Secure-" : ""}authjs.session-token`;
-}
 
 export async function POST(req: NextRequest) {
   try {

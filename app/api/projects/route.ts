@@ -11,6 +11,7 @@ import {
   deleteProjectSchema,
   updateProjectSchema,
 } from "@/lib/validators/projects";
+import { emitProjectChanged } from "@/lib/realtime/emitter";
 
 export async function POST(req: NextRequest) {
   try {
@@ -33,6 +34,12 @@ export async function POST(req: NextRequest) {
     const project = await createProject({
       ...result.data,
       userId: session.user.id,
+    });
+
+    emitProjectChanged(session.user.id, {
+      action: "created",
+      projectId: project.id,
+      occurredAt: new Date().toISOString(),
     });
 
     return NextResponse.json({ project }, { status: 201 });
@@ -94,6 +101,12 @@ export async function PATCH(req: NextRequest) {
       );
     }
 
+    emitProjectChanged(session.user.id, {
+      action: "updated",
+      projectId: project.id,
+      occurredAt: new Date().toISOString(),
+    });
+
     return NextResponse.json({ project });
   } catch (error) {
     console.error("Update project error:", error);
@@ -131,6 +144,12 @@ export async function DELETE(req: NextRequest) {
         { status: 404 },
       );
     }
+
+    emitProjectChanged(session.user.id, {
+      action: "deleted",
+      projectId: project.id,
+      occurredAt: new Date().toISOString(),
+    });
 
     return NextResponse.json({ project });
   } catch (error) {
