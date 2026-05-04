@@ -9,6 +9,7 @@ import {
   getSessionCookieName,
   shouldUseSecureCookies,
 } from "@/lib/auth/session";
+import { ensureDefaultWorkspaceForUser } from "@/lib/workspaces/defaults";
 
 const SESSION_MAX_AGE_SECONDS = 30 * 24 * 60 * 60;
 
@@ -34,12 +35,19 @@ export async function POST(req: NextRequest) {
     }
 
     const passwordMatches = await bcrypt.compare(password, user.password);
+
     if (!passwordMatches) {
       return NextResponse.json(
         { message: "Invalid email or password" },
         { status: 401 },
       );
     }
+
+    await ensureDefaultWorkspaceForUser({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+    });
 
     const sessionToken = randomBytes(32).toString("hex");
     const expires = new Date(Date.now() + SESSION_MAX_AGE_SECONDS * 1000);
@@ -66,6 +74,7 @@ export async function POST(req: NextRequest) {
     return response;
   } catch (error) {
     console.error("Login error: ", error);
+
     return NextResponse.json(
       { message: "Internal server error" },
       { status: 500 },

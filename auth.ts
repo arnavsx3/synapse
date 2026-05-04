@@ -2,7 +2,7 @@ import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
 import { db } from "@/lib/db/client";
-import { ensureDefaultWorkspaceForUser } from "@/lib/workspaces/default";
+import { ensureDefaultWorkspaceForUser } from "@/lib/workspaces/defaults";
 
 export const { handlers, auth } = NextAuth({
   adapter: DrizzleAdapter(db),
