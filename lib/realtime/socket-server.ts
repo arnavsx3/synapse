@@ -61,7 +61,9 @@ export function registerSocketServer(httpServer: HttpServer) {
   });
 
   io.on("connection", (socket) => {
-    socket.join(getUserRoom(socket.data.user.id));
+     const room = getUserRoom(socket.data.user.id);
+     socket.join(room);
+     console.log("Joined room:", room);
   });
 
   return io;
