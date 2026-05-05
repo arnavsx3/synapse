@@ -3,6 +3,7 @@ import { Emitter } from "@socket.io/redis-emitter";
 import {
   REALTIME_EVENTS,
   getUserRoom,
+  type WorkspaceChangedPayload,
   type ChatChangedPayload,
   type ChatMessageCreatedPayload,
   type NoteChangedPayload,
@@ -50,6 +51,13 @@ function emitToUser<EventPayload>(
   } catch (error) {
     console.error(`Realtime emit failed for ${eventName}:`, error);
   }
+}
+
+export function emitWorkspaceChanged(
+  userId: string,
+  payload: WorkspaceChangedPayload,
+) {
+  emitToUser(userId, REALTIME_EVENTS.WORKSPACE_CHANGED, payload);
 }
 
 export function emitProjectChanged(
