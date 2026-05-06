@@ -13,6 +13,7 @@ type WorkspaceStore = {
   setEditingProjectId: (id: string | null) => void;
   setEditingProjectName: (name: string) => void;
   resetProjectEditing: () => void;
+  resetWorkspaceState: () => void;
 };
 
 export const useWorkspaceStore = create<WorkspaceStore>((set) => ({
@@ -27,6 +28,13 @@ export const useWorkspaceStore = create<WorkspaceStore>((set) => ({
   setEditingProjectName: (name) => set({ editingProjectName: name }),
   resetProjectEditing: () =>
     set({
+      editingProjectId: null,
+      editingProjectName: "",
+    }),
+  resetWorkspaceState: () =>
+    set({
+      scope: "all",
+      selectedNoteId: null,
       editingProjectId: null,
       editingProjectName: "",
     }),

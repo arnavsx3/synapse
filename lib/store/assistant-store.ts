@@ -10,6 +10,7 @@ type AssistantStore = {
   clearDraft: () => void;
   setError: (error: string) => void;
   clearError: () => void;
+  resetAssistantState: () => void;
 };
 
 export const useAssistantStore = create<AssistantStore>((set) => ({
@@ -22,4 +23,10 @@ export const useAssistantStore = create<AssistantStore>((set) => ({
   clearDraft: () => set({ draft: "" }),
   setError: (error) => set({ error }),
   clearError: () => set({ error: "" }),
+  resetAssistantState: () =>
+    set({
+      selectedChatId: null,
+      draft: "",
+      error: "",
+    }),
 }));
