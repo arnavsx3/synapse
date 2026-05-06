@@ -4,6 +4,7 @@ export type Chat = {
   id: string;
   title: string;
   userId: string;
+  workspaceId: string;
   createdAt: string | null;
   updatedAt: string | null;
 };
@@ -34,43 +35,64 @@ type SendChatMessageResponse = {
   assistantMessage: ChatMessage;
 };
 
-export const getChats = async () => {
-  const response = await api.get<{ chats: Chat[] }>("/chats");
+export const getChats = async (workspaceId: string) => {
+  const response = await api.get<{ chats: Chat[] }>(
+    `/workspaces/${workspaceId}/chats`,
+  );
+
   return response.data.chats;
 };
 
-export const createChat = async (data: CreateChatInput = {}) => {
-  const response = await api.post<{ chat: Chat }>("/chats", data);
-  return response.data.chat;
-};
-
-export const updateChat = async (data: UpdateChatInput) => {
-  const response = await api.patch<{ chat: Chat }>("/chats", data);
-  return response.data.chat;
-};
-
-export const deleteChat = async (id: string) => {
-  const response = await api.delete<{ chat: Chat }>("/chats", {
-    data: { id },
-  });
+export const createChat = async (
+  workspaceId: string,
+  data: CreateChatInput = {},
+) => {
+  const response = await api.post<{ chat: Chat }>(
+    `/workspaces/${workspaceId}/chats`,
+    data,
+  );
 
   return response.data.chat;
 };
 
-export const getChatMessages = async (chatId: string) => {
+export const updateChat = async (
+  workspaceId: string,
+  data: UpdateChatInput,
+) => {
+  const response = await api.patch<{ chat: Chat }>(
+    `/workspaces/${workspaceId}/chats`,
+    data,
+  );
+
+  return response.data.chat;
+};
+
+export const deleteChat = async (workspaceId: string, id: string) => {
+  const response = await api.delete<{ chat: Chat }>(
+    `/workspaces/${workspaceId}/chats`,
+    {
+      data: { id },
+    },
+  );
+
+  return response.data.chat;
+};
+
+export const getChatMessages = async (workspaceId: string, chatId: string) => {
   const response = await api.get<{ messages: ChatMessage[] }>(
-    `/chats/${chatId}/messages`,
+    `/workspaces/${workspaceId}/chats/${chatId}/messages`,
   );
 
   return response.data.messages;
 };
 
 export const sendChatMessage = async (
+  workspaceId: string,
   chatId: string,
   data: SendChatMessageInput,
 ) => {
   const response = await api.post<SendChatMessageResponse>(
-    `/chats/${chatId}/messages`,
+    `/workspaces/${workspaceId}/chats/${chatId}/messages`,
     data,
   );
 
