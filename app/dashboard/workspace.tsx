@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useDashboardRealtime } from "@/lib/realtime/use-dashboard-realtime";
 import {
   createProject,
@@ -16,10 +16,8 @@ import {
   updateNote,
   type Note,
 } from "@/lib/api/notes";
-
 import { useWorkspaceStore } from "@/lib/store/workspace-store";
 import type { Scope } from "@/lib/store/workspace-store";
-
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 const getProjectIdFromScope = (scope: Scope) => {
@@ -103,6 +101,7 @@ function NoteEditor({
           className="rounded-md border border-red-400/30 px-3 py-2 text-sm font-medium text-red-200 transition hover:bg-red-500/10 disabled:opacity-60">
           Delete
         </button>
+
         <button
           type="button"
           onClick={() => onSave(noteTitle, noteContent)}
@@ -115,7 +114,7 @@ function NoteEditor({
   );
 }
 
-export function Workspace() {
+export function Workspace({ workspaceId }: { workspaceId: string }) {
   const {
     scope,
     selectedNoteId,
@@ -126,25 +125,38 @@ export function Workspace() {
     setEditingProjectId,
     setEditingProjectName,
     resetProjectEditing,
+    resetWorkspaceState,
   } = useWorkspaceStore();
 
   const queryClient = useQueryClient();
 
+  useEffect(() => {
+    resetWorkspaceState();
+  }, [resetWorkspaceState, workspaceId]);
+
   useDashboardRealtime({
+    workspaceId,
     scope,
     selectedNoteId,
     setScope,
     setSelectedNoteId,
   });
 
+  const [projectName, setProjectName] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
   const createProjectMutation = useMutation({
-    mutationFn: createProject,
+    mutationFn: (data: { name: string; description?: string }) =>
+      createProject(workspaceId, data),
     onMutate: () => {
       setError("");
       setSaving(true);
     },
     onSuccess: async (project) => {
-      await queryClient.invalidateQueries({ queryKey: ["projects"] });
+      await queryClient.invalidateQueries({
+        queryKey: ["projects", workspaceId],
+      });
       setProjectName("");
       setScope(`project:${project.id}`);
     },
@@ -157,13 +169,16 @@ export function Workspace() {
   });
 
   const renameProjectMutation = useMutation({
-    mutationFn: updateProject,
+    mutationFn: (data: { id: string; name?: string; description?: string }) =>
+      updateProject(workspaceId, data),
     onMutate: () => {
       setError("");
       setSaving(true);
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["projects"] });
+      await queryClient.invalidateQueries({
+        queryKey: ["projects", workspaceId],
+      });
       resetProjectEditing();
     },
     onError: () => {
@@ -175,14 +190,16 @@ export function Workspace() {
   });
 
   const deleteProjectMutation = useMutation({
-    mutationFn: deleteProject,
+    mutationFn: (projectId: string) => deleteProject(workspaceId, projectId),
     onMutate: () => {
       setError("");
       setSaving(true);
     },
     onSuccess: async (_data, projectId) => {
-      await queryClient.invalidateQueries({ queryKey: ["projects"] });
-      await queryClient.invalidateQueries({ queryKey: ["notes"] });
+      await queryClient.invalidateQueries({
+        queryKey: ["projects", workspaceId],
+      });
+      await queryClient.invalidateQueries({ queryKey: ["notes", workspaceId] });
 
       if (scope === `project:${projectId}`) {
         setScope("inbox");
@@ -197,13 +214,17 @@ export function Workspace() {
   });
 
   const createNoteMutation = useMutation({
-    mutationFn: createNote,
+    mutationFn: (data: {
+      title: string;
+      content: string;
+      projectId?: string | null;
+    }) => createNote(workspaceId, data),
     onMutate: () => {
       setError("");
       setSaving(true);
     },
     onSuccess: async (note) => {
-      await queryClient.invalidateQueries({ queryKey: ["notes"] });
+      await queryClient.invalidateQueries({ queryKey: ["notes", workspaceId] });
       setSelectedNoteId(note.id);
     },
     onError: () => {
@@ -215,13 +236,18 @@ export function Workspace() {
   });
 
   const saveNoteMutation = useMutation({
-    mutationFn: updateNote,
+    mutationFn: (data: {
+      id: string;
+      title?: string;
+      content?: string;
+      projectId?: string | null;
+    }) => updateNote(workspaceId, data),
     onMutate: () => {
       setError("");
       setSaving(true);
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["notes"] });
+      await queryClient.invalidateQueries({ queryKey: ["notes", workspaceId] });
     },
     onError: () => {
       setError("Unable to save note.");
@@ -232,13 +258,18 @@ export function Workspace() {
   });
 
   const moveNoteMutation = useMutation({
-    mutationFn: updateNote,
+    mutationFn: (data: {
+      id: string;
+      title?: string;
+      content?: string;
+      projectId?: string | null;
+    }) => updateNote(workspaceId, data),
     onMutate: () => {
       setError("");
       setSaving(true);
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["notes"] });
+      await queryClient.invalidateQueries({ queryKey: ["notes", workspaceId] });
 
       if (scope !== "all") {
         setSelectedNoteId(null);
@@ -253,13 +284,13 @@ export function Workspace() {
   });
 
   const deleteNoteMutation = useMutation({
-    mutationFn: deleteNote,
+    mutationFn: (noteId: string) => deleteNote(workspaceId, noteId),
     onMutate: () => {
       setError("");
       setSaving(true);
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["notes"] });
+      await queryClient.invalidateQueries({ queryKey: ["notes", workspaceId] });
       setSelectedNoteId(null);
     },
     onError: () => {
@@ -271,22 +302,18 @@ export function Workspace() {
   });
 
   const { data: projects = [] } = useQuery<Project[]>({
-    queryKey: ["projects"],
-    queryFn: getProjects,
+    queryKey: ["projects", workspaceId],
+    queryFn: () => getProjects(workspaceId),
   });
 
   const notesFilter = getNotesFilterFromScope(scope);
   const { data: notes = [], isLoading: loading } = useQuery<Note[]>({
-    queryKey: ["notes", notesFilter],
-    queryFn: () => getNotes(notesFilter),
+    queryKey: ["notes", workspaceId, notesFilter],
+    queryFn: () => getNotes(workspaceId, notesFilter),
   });
 
   const visibleNotes =
     scope === "inbox" ? notes.filter((n) => n.projectId === null) : notes;
-
-  const [projectName, setProjectName] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
 
   const selectedNote =
     visibleNotes.find((note) => note.id === selectedNoteId) ??
@@ -309,9 +336,11 @@ export function Workspace() {
     event.preventDefault();
 
     const name = projectName.trim();
+
     if (!name) {
       return;
     }
+
     createProjectMutation.mutate({ name });
   };
 
@@ -322,12 +351,13 @@ export function Workspace() {
       setError("Project name cannot be empty.");
       return;
     }
+
     renameProjectMutation.mutate({ id: projectId, name });
   };
 
   const handleDeleteProject = async (projectId: string) => {
     const confirmed = window.confirm(
-      "Delete this project? Its notes will move to Inbox.",
+      "Delete this project? Its notes will move to Inbox inside the same workspace.",
     );
 
     if (!confirmed) {
@@ -388,6 +418,7 @@ export function Workspace() {
     const confirmed = window.confirm(
       "Delete this note? This cannot be undone.",
     );
+
     if (!confirmed) {
       return;
     }
@@ -409,6 +440,7 @@ export function Workspace() {
             }`}>
             All Notes
           </button>
+
           <button
             type="button"
             onClick={() => setScope("inbox")}
@@ -516,6 +548,7 @@ export function Workspace() {
               placeholder="New project"
               className="w-full rounded-md border border-white/10 bg-black/30 px-3 py-2 text-sm outline-none transition placeholder:text-[#64748B] focus:border-(--primary)"
             />
+
             <button
               type="submit"
               disabled={saving}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAssistantRealtime } from "@/lib/realtime/use-assistant-realtime";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -15,7 +15,7 @@ import {
 } from "@/lib/api/chats";
 import { useAssistantStore } from "@/lib/store/assistant-store";
 
-export function AssistantWorkspace() {
+export function AssistantWorkspace({ workspaceId }: { workspaceId: string }) {
   const {
     selectedChatId,
     draft,
@@ -25,20 +25,26 @@ export function AssistantWorkspace() {
     clearDraft,
     setError,
     clearError,
+    resetAssistantState,
   } = useAssistantStore();
+
+  useEffect(() => {
+    resetAssistantState();
+  }, [resetAssistantState, workspaceId]);
 
   const queryClient = useQueryClient();
   const [editingChatId, setEditingChatId] = useState<string | null>(null);
   const [editingChatTitle, setEditingChatTitle] = useState("");
 
   const { data: chats = [], isLoading: chatsLoading } = useQuery<Chat[]>({
-    queryKey: ["chats"],
-    queryFn: getChats,
+    queryKey: ["chats", workspaceId],
+    queryFn: () => getChats(workspaceId),
   });
 
   const activeChatId = selectedChatId ?? chats[0]?.id ?? null;
 
   useAssistantRealtime({
+    workspaceId,
     activeChatId,
     selectedChatId,
     setSelectedChatId,
@@ -47,19 +53,19 @@ export function AssistantWorkspace() {
   const { data: messages = [], isLoading: messagesLoading } = useQuery<
     ChatMessage[]
   >({
-    queryKey: ["chat-messages", activeChatId],
-    queryFn: () => getChatMessages(activeChatId!),
+    queryKey: ["chat-messages", workspaceId, activeChatId],
+    queryFn: () => getChatMessages(workspaceId, activeChatId!),
     enabled: Boolean(activeChatId),
     refetchOnWindowFocus: false,
   });
 
   const createChatMutation = useMutation({
-    mutationFn: createChat,
+    mutationFn: (data: { title?: string }) => createChat(workspaceId, data),
     onMutate: () => {
       clearError();
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["chats"] });
+      await queryClient.invalidateQueries({ queryKey: ["chats", workspaceId] });
     },
     onError: () => {
       setError("Unable to create a new chat.");
@@ -67,12 +73,13 @@ export function AssistantWorkspace() {
   });
 
   const renameChatMutation = useMutation({
-    mutationFn: updateChat,
+    mutationFn: (data: { id: string; title: string }) =>
+      updateChat(workspaceId, data),
     onMutate: () => {
       clearError();
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["chats"] });
+      await queryClient.invalidateQueries({ queryKey: ["chats", workspaceId] });
       setEditingChatId(null);
       setEditingChatTitle("");
     },
@@ -82,7 +89,7 @@ export function AssistantWorkspace() {
   });
 
   const deleteChatMutation = useMutation({
-    mutationFn: deleteChat,
+    mutationFn: (chatId: string) => deleteChat(workspaceId, chatId),
     onMutate: () => {
       clearError();
     },
@@ -91,9 +98,9 @@ export function AssistantWorkspace() {
         setSelectedChatId(null);
       }
 
-      await queryClient.invalidateQueries({ queryKey: ["chats"] });
+      await queryClient.invalidateQueries({ queryKey: ["chats", workspaceId] });
       await queryClient.removeQueries({
-        queryKey: ["chat-messages", deletedChatId],
+        queryKey: ["chat-messages", workspaceId, deletedChatId],
       });
     },
     onError: () => {
@@ -103,23 +110,23 @@ export function AssistantWorkspace() {
 
   const sendChatMessageMutation = useMutation({
     mutationFn: ({ chatId, message }: { chatId: string; message: string }) =>
-      sendChatMessage(chatId, { message }),
+      sendChatMessage(workspaceId, chatId, { message }),
     onMutate: () => {
       clearError();
     },
     onSuccess: async (_data, variables) => {
       clearDraft();
-      await queryClient.invalidateQueries({ queryKey: ["chats"] });
+      await queryClient.invalidateQueries({ queryKey: ["chats", workspaceId] });
       await queryClient.invalidateQueries({
-        queryKey: ["chat-messages", variables.chatId],
+        queryKey: ["chat-messages", workspaceId, variables.chatId],
       });
     },
     onError: async (_error, variables) => {
       setError("Your message was saved, but the assistant reply failed.");
 
-      await queryClient.invalidateQueries({ queryKey: ["chats"] });
+      await queryClient.invalidateQueries({ queryKey: ["chats", workspaceId] });
       await queryClient.invalidateQueries({
-        queryKey: ["chat-messages", variables.chatId],
+        queryKey: ["chat-messages", workspaceId, variables.chatId],
       });
     },
   });
@@ -300,7 +307,7 @@ export function AssistantWorkspace() {
             Synapse Assistant
           </h2>
           <p className="mt-1 text-sm text-[#94A3B8]">
-            Persistent, chat-based AI workflow
+            Persistent, chat-based AI workflow inside this workspace
           </p>
         </div>
 
@@ -314,7 +321,7 @@ export function AssistantWorkspace() {
                   </h3>
                   <p className="mt-2 max-w-sm text-sm text-[#94A3B8]">
                     Send a message below and a new persistent conversation will
-                    be created automatically.
+                    be created automatically for this workspace.
                   </p>
                 </div>
               </div>
