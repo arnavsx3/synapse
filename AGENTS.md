@@ -135,7 +135,7 @@ Users can ask questions and receive AI-generated responses.
 
 ## Phase 6: Context-Aware AI
 ### Aim
-Make AI responses grounded in the user’s own notes instead of generic model output.
+Make AI responses grounded in the user's own notes instead of generic model output.
 
 ### Focus
 - Retrieving relevant notes
@@ -305,6 +305,9 @@ When assisting on this project:
 - explain the concept and purpose of that phase,
 - keep recommendations aligned with the learning goal,
 - avoid changing code unless explicitly asked,
-- prefer phased roadmaps over broad “production-grade” rewrites.
+- prefer phased roadmaps over broad production-grade rewrites.
+
+## Documentation Rule
+When updating docs for this repo, prefer accuracy over polish-for-polish's-sake: describe what the code actually does today, call out intentional tradeoffs clearly, and make setup instructions practical enough that a future version of me can return to the project and get it running again without rediscovering hidden steps.
 
 ---

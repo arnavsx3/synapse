@@ -1,186 +1,209 @@
-#  Synapse
+# Synapse
 
-> AI-powered knowledge workspace — combining note-taking, semantic search, and real-time AI assistance.
+Synapse is a full-stack knowledge workspace that combines notes, projects, semantic retrieval, AI chat, background processing, and realtime updates in one app. The project began as a learning-first SaaS sandbox and has gradually grown into a broader systems-learning playground.
 
-Synapse is a full-stack, production-style SaaS application inspired by tools like Notion and ChatGPT. It allows users to create, organize, and interact with their knowledge using AI.
+## Overview
 
----
+Synapse is built around a workspace model where users can organize projects and notes, then use AI features on top of that data. The app now includes:
 
-##  Features
+- authentication and protected routes
+- workspace, project, note, and chat flows
+- semantic note retrieval with embeddings
+- AI chat grounded in user data
+- background jobs for embedding generation
+- realtime updates with Socket.IO
+- Docker-based orchestration for the local runtime services
 
-* Rich note-taking & knowledge management
-* AI-powered chat & document assistance (Groq API)
-* Semantic search using vector embeddings (pgvector)
-* Real-time updates with WebSockets
-* Context-aware AI responses from user data
-* Background processing with job queues
-* Optimized performance using caching
+## Current Scope
 
----
+The repo now spans much more than the early setup phases. In practical terms, it includes:
 
-##  Tech Stack
+- Next.js App Router frontend
+- custom Node server for Next.js plus Socket.IO
+- Drizzle ORM with Neon Postgres
+- pgvector-based note embeddings
+- BullMQ worker processing
+- Redis-backed queue and pub/sub behavior
+- Groq-powered assistant responses
+- Docker Compose for local orchestration of app, worker, and Redis
 
-## Auth Note
-The project uses a mixed auth approach intentionally.
+## Tech Stack
 
-Reason:
-- A unified NextAuth setup for both Google OAuth and email/password did not behave reliably for database-backed session creation in this project setup.
+### Frontend
 
-Current approach:
-- Google auth uses NextAuth.
-- Email/password auth uses custom API routes and manually creates the session token in the database.
+- Next.js 16
+- React 19
+- TypeScript
+- Tailwind CSS
+- TanStack Query
+- Zustand
 
-Why this is acceptable:
-- The project is for learning, not for enforcing perfect architectural purity.
-- The current setup preserves progress and still teaches the important auth concepts.
+### Backend And Infra
 
-Tradeoff:
-- Auth flow is less unified than an ideal production setup.
-- Documentation should clearly explain this so the structure does not feel accidental later.
+- Next.js route handlers
+- custom Node HTTP server
+- Drizzle ORM
+- Neon Postgres
+- pgvector
+- Redis
+- BullMQ
+- Socket.IO
+- Docker
+- Docker Compose
 
+### AI
 
-### 🖥️ Frontend
+- Groq API
+- external embedding API
 
-* Next.js (App Router)
-* TypeScript
-* Tailwind CSS
-* Zustand (state management)
-* Tanstack (React query)
+## Architecture
 
-###  Backend
+The app uses a custom server in [server.ts](/D:/PROJECTS/synapse/server.ts:1) so the HTTP layer and Socket.IO server run together. Background embedding work is processed separately by [worker/note-embedding-worker.ts](/D:/PROJECTS/synapse/worker/note-embedding-worker.ts:1). Redis is used for BullMQ jobs and Redis-backed realtime messaging. PostgreSQL is currently provided by Neon, and note embeddings are stored with `pgvector`.
 
-* Next.js API Routes (or Node.js service)
-* tRPC (optional)
-* Zod (schema validation)
+## Authentication Note
 
-###  AI Layer
+This repo intentionally uses a mixed auth approach:
 
-* Groq API (LLM inference + streaming)
+- Google OAuth uses NextAuth
+- email/password auth uses custom API routes and manual database session creation
 
+This is an intentional learning tradeoff rather than an accidental inconsistency. The current setup keeps the important auth ideas visible without blocking progress on the rest of the stack.
 
-###  Database
+## Main Runtime Pieces
 
-* PostgreSQL (Neon)
-* Drizzle (orm)
-* pgvector (vector similarity search)
+The app currently has three local runtime services:
 
+1. `app`
+   Serves the UI, API routes, auth flow, and Socket.IO connection.
 
-###  Caching & Queue
+2. `worker`
+   Processes note embedding jobs in the background.
 
-* Redis (Upstash)
-* BullMQ (background jobs & workers)
+3. `redis`
+   Supports BullMQ and Redis-based realtime behavior.
 
-###  Real-Time
+Postgres is not containerized in the current setup. The app still connects to Neon through `DATABASE_URL`.
 
-* WebSockets / Socket.IO
-
-###  Authentication
-
-* NextAuth / Clerk
-
-###  DevOps
-
-* Docker
-* Docker Compose
-
----
-
-##  Architecture Overview
-
-Client (Next.js)
-↓
-API Layer
-↓
-Service Layer
-├── AI Service (Groq)
-├── Database Service (PostgreSQL)
-├── Cache Layer (Redis)
-├── Queue System (BullMQ)
-↓
-Infrastructure (Neon + Redis)
-
----
-
-##  Core Workflows
-
-###  Note Processing
-
-1. User creates a note
-2. Stored in PostgreSQL
-3. Background job generates embeddings
-4. Stored using pgvector
-
----
-
-###  AI Query Flow
-
-1. User asks a question
-2. Relevant notes retrieved via vector search
-3. Context sent to Groq API
-4. Response streamed back in real-time
-
----
-
-##  Setup (Local Development)
+## Scripts
 
 ```bash
-# clone repo
-git clone https://github.com/your-username/synapse.git
-
-cd synapse
-
-# install deps
-npm install
-
-# run dev server
 npm run dev
+npm run worker
+npm run build
+npm run start
+npm run lint
 ```
 
----
+## Environment Variables
 
-##  Environment Variables
-
-Create a `.env` file:
+Create a `.env` file in the project root and provide values for:
 
 ```env
 DATABASE_URL=
 REDIS_URL=
-GROQ_API_KEY=
+NEXTAUTH_URL=http://localhost:3000
 NEXTAUTH_SECRET=
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+GROQ_API_KEY=
+EMBEDDING_API_URL=
+EMBEDDING_API_KEY=
+EMBEDDING_DIMENSIONS=384
 ```
 
----
+### Notes
 
-##  Docker (optional)
+- In the current Docker setup, `DATABASE_URL` should still point to Neon.
+- Inside Docker Compose, Redis is addressed as `redis://redis:6379`.
+- `AUTH_TRUST_HOST=true` is used for the containerized app service so Auth.js trusts the local host header.
+
+## Local Development
+
+Install dependencies:
 
 ```bash
-docker-compose up --build
+npm install
 ```
 
----
+Run the app:
 
-##  Future Improvements
+```bash
+npm run dev
+```
 
-* Multi-tenant workspaces
-* Role-based access control
-* Collaborative editing
-* AI agents & automation
-* Advanced caching strategies
+Run the worker in a separate terminal:
 
----
+```bash
+npm run worker
+```
 
-##  Contributing
+Make sure Redis and your required environment variables are available before testing queue, embedding, AI, or realtime flows.
 
-This is a personal portfolio project, but suggestions and feedback are welcome.
+## Docker Setup
 
----
+This repo includes a first-pass Docker setup focused on local orchestration rather than full infrastructure replacement.
 
-##  License
+### What Docker Runs
 
-MIT License
+- `synapse-app`
+- `synapse-worker`
+- `synapse-redis`
 
----
+### What Stays External
 
-##  Acknowledgements
+- Neon Postgres
+- external AI and embedding providers
 
-Inspired by modern AI-native tools like Notion, ChatGPT, and knowledge graphs.
+### Start The Stack
+
+From the project root:
+
+```bash
+docker compose up --build
+```
+
+### Stop The Stack
+
+```bash
+docker compose down
+```
+
+### Useful Commands
+
+```bash
+docker compose up --build
+docker compose down
+docker compose logs -f app
+docker compose logs -f worker
+docker compose logs -f redis
+```
+
+### What A Healthy Docker Run Looks Like
+
+You should be able to confirm that:
+
+- the app opens at `http://localhost:3000`
+- login works
+- protected routes remain accessible
+- editing a note triggers an embedding job
+- the worker logs show `Embedding job completed: ...`
+- realtime socket connections join successfully
+
+## Core Flow
+
+The main end-to-end flow in this repo looks like this:
+
+1. a user creates or updates a note
+2. the note is stored in Postgres
+3. the app enqueues an embedding job through Redis and BullMQ
+4. the worker generates and stores the embedding
+5. assistant requests retrieve relevant notes semantically
+6. Groq receives grounded context and returns the response
+
+## Why This Repo Exists
+
+Even though the app now includes several production-style parts, this project is still primarily a learning workspace. The goal is to understand how the pieces fit together, iterate phase by phase, and keep tradeoffs visible rather than pretending the project is optimized for purity above learning value.
+
+## License
+
+MIT
