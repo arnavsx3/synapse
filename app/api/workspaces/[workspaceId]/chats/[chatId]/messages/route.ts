@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAppContext } from "@/lib/app-context";
 import {
   addChatMessage,
   getChatByWorkspace,
@@ -52,16 +51,7 @@ export async function GET(
   context: { params: Promise<{ workspaceId: string; chatId: string }> },
 ) {
   try {
-    const session = await getAppContext();
-
-    if (!session?.user?.id) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-    }
-
-    const workspaceAccess = await getAuthorizedWorkspace(
-      context.params,
-      session.user.id,
-    );
+    const workspaceAccess = await getAuthorizedWorkspace(context.params);
 
     if (workspaceAccess.error === "invalid") {
       return NextResponse.json(
@@ -86,7 +76,6 @@ export async function GET(
 
     const messages = await getChatMessagesByWorkspace(
       chatParamsResult.data.chatId,
-      session.user.id,
       workspaceAccess.workspace.id,
     );
 
@@ -110,22 +99,10 @@ export async function POST(
   context: { params: Promise<{ workspaceId: string; chatId: string }> },
 ) {
   let chatId: string | null = null;
-  let sessionUserId: string | null = null;
   let workspaceId: string | null = null;
 
   try {
-    const session = await getAppContext();
-
-    if (!session?.user?.id) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-    }
-
-    sessionUserId = session.user.id;
-
-    const workspaceAccess = await getAuthorizedWorkspace(
-      context.params,
-      session.user.id,
-    );
+    const workspaceAccess = await getAuthorizedWorkspace(context.params);
 
     if (workspaceAccess.error === "invalid") {
       return NextResponse.json(
@@ -162,7 +139,6 @@ export async function POST(
 
     const chat = await getChatByWorkspace(
       paramsResult.data.chatId,
-      session.user.id,
       workspaceAccess.workspace.id,
     );
 
@@ -187,7 +163,7 @@ export async function POST(
       content: userMessageText,
     });
 
-    emitChatMessageCreated(session.user.id, {
+    emitChatMessageCreated({
       workspaceId: workspaceAccess.workspace.id,
       chatId: chat.id,
       messageId: userMessage.id,
@@ -197,7 +173,6 @@ export async function POST(
 
     const history = await getChatMessagesByWorkspace(
       chat.id,
-      session.user.id,
       workspaceAccess.workspace.id,
     );
 
@@ -212,7 +187,6 @@ export async function POST(
     try {
       const queryEmbedding = await embedText(userMessageText);
       relevantNotes = await getSemanticRelevantNotesByWorkspace(
-        session.user.id,
         workspaceAccess.workspace.id,
         queryEmbedding,
         5,
@@ -279,7 +253,7 @@ export async function POST(
       content: assistantReply,
     });
 
-    emitChatMessageCreated(session.user.id, {
+    emitChatMessageCreated({
       workspaceId: workspaceAccess.workspace.id,
       chatId: chat.id,
       messageId: assistantMessage.id,
@@ -291,18 +265,16 @@ export async function POST(
       await updateChatTitleInWorkspace(
         chat.id,
         userMessageText.slice(0, 20).replace(/\s+\S*$/, ""),
-        session.user.id,
         workspaceAccess.workspace.id,
       );
     } else {
       await touchChatInWorkspace(
         chat.id,
-        session.user.id,
         workspaceAccess.workspace.id,
       );
     }
 
-    emitChatChanged(session.user.id, {
+    emitChatChanged({
       action: "updated",
       workspaceId: workspaceAccess.workspace.id,
       chatId: chat.id,
@@ -316,14 +288,14 @@ export async function POST(
   } catch (error) {
     console.error("Send workspace chat message error:", error);
 
-    if (chatId && sessionUserId && workspaceId) {
+    if (chatId && workspaceId) {
       const fallbackMessage = await addChatMessage({
         chatId,
         role: "assistant",
         content: "I couldn't generate a response right now. Please try again.",
       });
 
-      emitChatMessageCreated(sessionUserId, {
+      emitChatMessageCreated({
         workspaceId,
         chatId,
         messageId: fallbackMessage.id,
@@ -331,7 +303,7 @@ export async function POST(
         occurredAt: new Date().toISOString(),
       });
 
-      emitChatChanged(sessionUserId, {
+      emitChatChanged({
         action: "updated",
         workspaceId,
         chatId,

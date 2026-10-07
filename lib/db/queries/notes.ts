@@ -25,7 +25,6 @@ export const getNotesByUser = async (
 };
 
 export const getNotesByWorkspace = async (
-  _scopeId: string,
   workspaceId: string,
   projectId?: NotesProjectFilter,
 ) => {
@@ -47,7 +46,6 @@ export const updateNote = async (id: string, data: UpdateNote, _scopeId: string)
 export const updateNoteInWorkspace = async (
   id: string,
   data: UpdateNote,
-  _scopeId: string,
   workspaceId: string,
 ) => {
   const [note] = await db.update(notes).set({ ...data, updatedAt: new Date() }).where(and(eq(notes.id, id), eq(notes.workspaceId, workspaceId))).returning();
@@ -61,7 +59,6 @@ export const deleteNote = async (id: string, _scopeId: string) => {
 
 export const deleteNoteInWorkspace = async (
   id: string,
-  _scopeId: string,
   workspaceId: string,
 ) => {
   const [note] = await db.delete(notes).where(and(eq(notes.id, id), eq(notes.workspaceId, workspaceId))).returning();

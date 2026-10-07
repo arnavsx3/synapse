@@ -78,7 +78,6 @@ export const getSemanticRelevantNotesByUser = async (
 };
 
 export const getSemanticRelevantNotesByWorkspace = async (
-  _scopeId: string,
   workspaceId: string,
   queryEmbedding: number[],
   limit = 5,

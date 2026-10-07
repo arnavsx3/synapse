@@ -13,7 +13,7 @@ export const createChat = async (data: CreateChat) => {
 export const getChatsByUser = async (_scopeId: string) =>
   db.select().from(chats).orderBy(desc(chats.updatedAt), desc(chats.createdAt));
 
-export const getChatsByWorkspace = async (_scopeId: string, workspaceId: string) =>
+export const getChatsByWorkspace = async (workspaceId: string) =>
   db.select().from(chats).where(eq(chats.workspaceId, workspaceId)).orderBy(desc(chats.updatedAt), desc(chats.createdAt));
 
 export const getChatByUser = async (id: string, _scopeId: string) => {
@@ -21,11 +21,7 @@ export const getChatByUser = async (id: string, _scopeId: string) => {
   return chat;
 };
 
-export const getChatByWorkspace = async (
-  id: string,
-  _scopeId: string,
-  workspaceId: string,
-) => {
+export const getChatByWorkspace = async (id: string, workspaceId: string) => {
   const [chat] = await db.select().from(chats).where(and(eq(chats.id, id), eq(chats.workspaceId, workspaceId)));
   return chat;
 };
@@ -38,10 +34,9 @@ export const getChatMessagesByUser = async (chatId: string, scopeId: string) => 
 
 export const getChatMessagesByWorkspace = async (
   chatId: string,
-  scopeId: string,
   workspaceId: string,
 ) => {
-  const chat = await getChatByWorkspace(chatId, scopeId, workspaceId);
+  const chat = await getChatByWorkspace(chatId, workspaceId);
   if (!chat) return null;
   return db.select().from(chatMessages).where(eq(chatMessages.chatId, chatId)).orderBy(asc(chatMessages.createdAt));
 };
@@ -59,7 +54,6 @@ export const updateChatTitle = async (id: string, title: string, _scopeId: strin
 export const updateChatTitleInWorkspace = async (
   id: string,
   title: string,
-  _scopeId: string,
   workspaceId: string,
 ) => {
   const [chat] = await db.update(chats).set({ title, updatedAt: new Date() }).where(and(eq(chats.id, id), eq(chats.workspaceId, workspaceId))).returning();
@@ -71,7 +65,7 @@ export const touchChat = async (id: string, _scopeId: string) => {
   return chat;
 };
 
-export const touchChatInWorkspace = async (id: string, _scopeId: string, workspaceId: string) => {
+export const touchChatInWorkspace = async (id: string, workspaceId: string) => {
   const [chat] = await db.update(chats).set({ updatedAt: new Date() }).where(and(eq(chats.id, id), eq(chats.workspaceId, workspaceId))).returning();
   return chat;
 };
@@ -81,7 +75,7 @@ export const deleteChat = async (id: string, _scopeId: string) => {
   return chat;
 };
 
-export const deleteChatInWorkspace = async (id: string, _scopeId: string, workspaceId: string) => {
+export const deleteChatInWorkspace = async (id: string, workspaceId: string) => {
   const [chat] = await db.delete(chats).where(and(eq(chats.id, id), eq(chats.workspaceId, workspaceId))).returning();
   return chat;
 };

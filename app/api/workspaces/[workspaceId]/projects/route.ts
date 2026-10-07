@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAppContext } from "@/lib/app-context";
 import {
   createProject,
   deleteProjectInWorkspace,
@@ -19,16 +18,7 @@ export async function GET(
   context: { params: Promise<{ workspaceId: string }> },
 ) {
   try {
-    const session = await getAppContext();
-
-    if (!session?.user?.id) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-    }
-
-    const workspaceAccess = await getAuthorizedWorkspace(
-      context.params,
-      session.user.id,
-    );
+    const workspaceAccess = await getAuthorizedWorkspace(context.params);
 
     if (workspaceAccess.error === "invalid") {
       return NextResponse.json(
@@ -44,10 +34,7 @@ export async function GET(
       );
     }
 
-    const projects = await getProjectsByWorkspace(
-      session.user.id,
-      workspaceAccess.workspace.id,
-    );
+    const projects = await getProjectsByWorkspace(workspaceAccess.workspace.id);
 
     return NextResponse.json({ projects });
   } catch (error) {
@@ -65,16 +52,7 @@ export async function POST(
   context: { params: Promise<{ workspaceId: string }> },
 ) {
   try {
-    const session = await getAppContext();
-
-    if (!session?.user?.id) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-    }
-
-    const workspaceAccess = await getAuthorizedWorkspace(
-      context.params,
-      session.user.id,
-    );
+    const workspaceAccess = await getAuthorizedWorkspace(context.params);
 
     if (workspaceAccess.error === "invalid") {
       return NextResponse.json(
@@ -105,7 +83,7 @@ export async function POST(
       workspaceId: workspaceAccess.workspace.id,
     });
 
-    emitProjectChanged(session.user.id, {
+    emitProjectChanged({
       action: "created",
       workspaceId: workspaceAccess.workspace.id,
       projectId: project.id,
@@ -128,16 +106,7 @@ export async function PATCH(
   context: { params: Promise<{ workspaceId: string }> },
 ) {
   try {
-    const session = await getAppContext();
-
-    if (!session?.user?.id) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-    }
-
-    const workspaceAccess = await getAuthorizedWorkspace(
-      context.params,
-      session.user.id,
-    );
+    const workspaceAccess = await getAuthorizedWorkspace(context.params);
 
     if (workspaceAccess.error === "invalid") {
       return NextResponse.json(
@@ -167,7 +136,6 @@ export async function PATCH(
     const project = await updateProjectInWorkspace(
       id,
       data,
-      session.user.id,
       workspaceAccess.workspace.id,
     );
 
@@ -178,7 +146,7 @@ export async function PATCH(
       );
     }
 
-    emitProjectChanged(session.user.id, {
+    emitProjectChanged({
       action: "updated",
       workspaceId: workspaceAccess.workspace.id,
       projectId: project.id,
@@ -201,16 +169,7 @@ export async function DELETE(
   context: { params: Promise<{ workspaceId: string }> },
 ) {
   try {
-    const session = await getAppContext();
-
-    if (!session?.user?.id) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-    }
-
-    const workspaceAccess = await getAuthorizedWorkspace(
-      context.params,
-      session.user.id,
-    );
+    const workspaceAccess = await getAuthorizedWorkspace(context.params);
 
     if (workspaceAccess.error === "invalid") {
       return NextResponse.json(
@@ -238,7 +197,6 @@ export async function DELETE(
 
     const project = await deleteProjectInWorkspace(
       result.data.id,
-      session.user.id,
       workspaceAccess.workspace.id,
     );
 
@@ -249,7 +207,7 @@ export async function DELETE(
       );
     }
 
-    emitProjectChanged(session.user.id, {
+    emitProjectChanged({
       action: "deleted",
       workspaceId: workspaceAccess.workspace.id,
       projectId: project.id,

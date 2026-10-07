@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAppContext } from "@/lib/app-context";
 import {
   createChat,
   deleteChatInWorkspace,
@@ -19,16 +18,7 @@ export async function GET(
   context: { params: Promise<{ workspaceId: string }> },
 ) {
   try {
-    const session = await getAppContext();
-
-    if (!session?.user?.id) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-    }
-
-    const workspaceAccess = await getAuthorizedWorkspace(
-      context.params,
-      session.user.id,
-    );
+    const workspaceAccess = await getAuthorizedWorkspace(context.params);
 
     if (workspaceAccess.error === "invalid") {
       return NextResponse.json(
@@ -45,7 +35,6 @@ export async function GET(
     }
 
     const chats = await getChatsByWorkspace(
-      session.user.id,
       workspaceAccess.workspace.id,
     );
 
@@ -65,16 +54,7 @@ export async function POST(
   context: { params: Promise<{ workspaceId: string }> },
 ) {
   try {
-    const session = await getAppContext();
-
-    if (!session?.user?.id) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-    }
-
-    const workspaceAccess = await getAuthorizedWorkspace(
-      context.params,
-      session.user.id,
-    );
+    const workspaceAccess = await getAuthorizedWorkspace(context.params);
 
     if (workspaceAccess.error === "invalid") {
       return NextResponse.json(
@@ -102,7 +82,7 @@ export async function POST(
       title: result.data.title?.trim() || "New Chat",
     });
 
-    emitChatChanged(session.user.id, {
+    emitChatChanged({
       action: "created",
       workspaceId: workspaceAccess.workspace.id,
       chatId: chat.id,
@@ -125,16 +105,7 @@ export async function PATCH(
   context: { params: Promise<{ workspaceId: string }> },
 ) {
   try {
-    const session = await getAppContext();
-
-    if (!session?.user?.id) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-    }
-
-    const workspaceAccess = await getAuthorizedWorkspace(
-      context.params,
-      session.user.id,
-    );
+    const workspaceAccess = await getAuthorizedWorkspace(context.params);
 
     if (workspaceAccess.error === "invalid") {
       return NextResponse.json(
@@ -160,7 +131,6 @@ export async function PATCH(
     const chat = await updateChatTitleInWorkspace(
       result.data.id,
       result.data.title,
-      session.user.id,
       workspaceAccess.workspace.id,
     );
 
@@ -168,7 +138,7 @@ export async function PATCH(
       return NextResponse.json({ message: "Chat not found" }, { status: 404 });
     }
 
-    emitChatChanged(session.user.id, {
+    emitChatChanged({
       action: "updated",
       workspaceId: workspaceAccess.workspace.id,
       chatId: chat.id,
@@ -191,16 +161,7 @@ export async function DELETE(
   context: { params: Promise<{ workspaceId: string }> },
 ) {
   try {
-    const session = await getAppContext();
-
-    if (!session?.user?.id) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-    }
-
-    const workspaceAccess = await getAuthorizedWorkspace(
-      context.params,
-      session.user.id,
-    );
+    const workspaceAccess = await getAuthorizedWorkspace(context.params);
 
     if (workspaceAccess.error === "invalid") {
       return NextResponse.json(
@@ -225,7 +186,6 @@ export async function DELETE(
 
     const chat = await deleteChatInWorkspace(
       result.data.id,
-      session.user.id,
       workspaceAccess.workspace.id,
     );
 
@@ -233,7 +193,7 @@ export async function DELETE(
       return NextResponse.json({ message: "Chat not found" }, { status: 404 });
     }
 
-    emitChatChanged(session.user.id, {
+    emitChatChanged({
       action: "deleted",
       workspaceId: workspaceAccess.workspace.id,
       chatId: chat.id,

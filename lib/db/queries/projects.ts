@@ -13,10 +13,7 @@ export const createProject = async (data: CreateProject) => {
 export const getProjectsByUser = async (_scopeId: string) =>
   db.select().from(projects).orderBy(desc(projects.updatedAt), desc(projects.createdAt));
 
-export const getProjectsByWorkspace = async (
-  _scopeId: string,
-  workspaceId: string,
-) =>
+export const getProjectsByWorkspace = async (workspaceId: string) =>
   db
     .select()
     .from(projects)
@@ -30,7 +27,6 @@ export const getProjectByUser = async (id: string, _scopeId: string) => {
 
 export const getProjectByWorkspace = async (
   id: string,
-  _scopeId: string,
   workspaceId: string,
 ) => {
   const [project] = await db
@@ -56,7 +52,6 @@ export const updateProject = async (
 export const updateProjectInWorkspace = async (
   id: string,
   data: UpdateProject,
-  _scopeId: string,
   workspaceId: string,
 ) => {
   const [project] = await db
@@ -77,7 +72,6 @@ export const deleteProject = async (id: string, _scopeId: string) => {
 
 export const deleteProjectInWorkspace = async (
   id: string,
-  _scopeId: string,
   workspaceId: string,
 ) => {
   const [project] = await db

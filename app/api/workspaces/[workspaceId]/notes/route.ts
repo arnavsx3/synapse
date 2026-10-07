@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAppContext } from "@/lib/app-context";
 import {
   createNote,
   deleteNoteInWorkspace,
@@ -26,16 +25,7 @@ export async function GET(
   context: { params: Promise<{ workspaceId: string }> },
 ) {
   try {
-    const session = await getAppContext();
-
-    if (!session?.user?.id) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-    }
-
-    const workspaceAccess = await getAuthorizedWorkspace(
-      context.params,
-      session.user.id,
-    );
+    const workspaceAccess = await getAuthorizedWorkspace(context.params);
 
     if (workspaceAccess.error === "invalid") {
       return NextResponse.json(
@@ -65,7 +55,6 @@ export async function GET(
     if (projectIdResult.data && projectIdResult.data !== "inbox") {
       const project = await getProjectByWorkspace(
         projectIdResult.data,
-        session.user.id,
         workspaceAccess.workspace.id,
       );
       if (!project) {
@@ -77,7 +66,6 @@ export async function GET(
     }
 
     const notes = await getNotesByWorkspace(
-      session.user.id,
       workspaceAccess.workspace.id,
       projectIdResult.data,
     );
@@ -98,16 +86,7 @@ export async function POST(
   context: { params: Promise<{ workspaceId: string }> },
 ) {
   try {
-    const session = await getAppContext();
-
-    if (!session?.user?.id) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-    }
-
-    const workspaceAccess = await getAuthorizedWorkspace(
-      context.params,
-      session.user.id,
-    );
+    const workspaceAccess = await getAuthorizedWorkspace(context.params);
 
     if (workspaceAccess.error === "invalid") {
       return NextResponse.json(
@@ -136,7 +115,6 @@ export async function POST(
     if (result.data.projectId) {
       const project = await getProjectByWorkspace(
         result.data.projectId,
-        session.user.id,
         workspaceAccess.workspace.id,
       );
 
@@ -161,7 +139,7 @@ export async function POST(
       console.error("Create note embedding queue error:", queueError);
     }
 
-    emitNoteChanged(session.user.id, {
+    emitNoteChanged({
       action: "created",
       workspaceId: workspaceAccess.workspace.id,
       noteId: note.id,
@@ -185,16 +163,7 @@ export async function PATCH(
   context: { params: Promise<{ workspaceId: string }> },
 ) {
   try {
-    const session = await getAppContext();
-
-    if (!session?.user?.id) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-    }
-
-    const workspaceAccess = await getAuthorizedWorkspace(
-      context.params,
-      session.user.id,
-    );
+    const workspaceAccess = await getAuthorizedWorkspace(context.params);
 
     if (workspaceAccess.error === "invalid") {
       return NextResponse.json(
@@ -225,7 +194,6 @@ export async function PATCH(
     if (data.projectId) {
       const project = await getProjectByWorkspace(
         data.projectId,
-        session.user.id,
         workspaceAccess.workspace.id,
       );
 
@@ -240,7 +208,6 @@ export async function PATCH(
     const updated = await updateNoteInWorkspace(
       id,
       data,
-      session.user.id,
       workspaceAccess.workspace.id,
     );
 
@@ -256,7 +223,7 @@ export async function PATCH(
       console.error("Update note embedding queue error:", queueError);
     }
 
-    emitNoteChanged(session.user.id, {
+    emitNoteChanged({
       action: "updated",
       workspaceId: workspaceAccess.workspace.id,
       noteId: updated.id,
@@ -280,16 +247,7 @@ export async function DELETE(
   context: { params: Promise<{ workspaceId: string }> },
 ) {
   try {
-    const session = await getAppContext();
-
-    if (!session?.user?.id) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-    }
-
-    const workspaceAccess = await getAuthorizedWorkspace(
-      context.params,
-      session.user.id,
-    );
+    const workspaceAccess = await getAuthorizedWorkspace(context.params);
 
     if (workspaceAccess.error === "invalid") {
       return NextResponse.json(
@@ -317,7 +275,6 @@ export async function DELETE(
 
     const deleted = await deleteNoteInWorkspace(
       result.data.id,
-      session.user.id,
       workspaceAccess.workspace.id,
     );
 
@@ -325,7 +282,7 @@ export async function DELETE(
       return NextResponse.json({ message: "Note not found" }, { status: 404 });
     }
 
-    emitNoteChanged(session.user.id, {
+    emitNoteChanged({
       action: "deleted",
       workspaceId: workspaceAccess.workspace.id,
       noteId: deleted.id,
