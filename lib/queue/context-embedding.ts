@@ -1,7 +1,7 @@
-import { contextEmbeddingQueue } from "./queues";
+import { getContextEmbeddingQueue } from "./queues";
 
 export async function enqueueContextEmbeddingJob(contextId: string) {
-  await contextEmbeddingQueue.add(
+  await getContextEmbeddingQueue().add(
     "embed-context",
     { contextId },
     {

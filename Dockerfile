@@ -1,28 +1,23 @@
-FROM node:20-alpine
-
+FROM node:20-alpine AS dependencies
 WORKDIR /app
-
 COPY package.json package-lock.json ./
 RUN npm ci
 
+FROM node:20-alpine AS builder
+WORKDIR /app
+ENV NEXT_TELEMETRY_DISABLED=1
+COPY --from=dependencies /app/node_modules ./node_modules
 COPY . .
-
-ARG DATABASE_URL
-ARG REDIS_URL
-ARG GROQ_API_KEY
-ARG EMBEDDING_API_URL
-ARG EMBEDDING_API_KEY
-ARG EMBEDDING_DIMENSIONS
-
-ENV DATABASE_URL=$DATABASE_URL
-ENV REDIS_URL=$REDIS_URL
-ENV GROQ_API_KEY=$GROQ_API_KEY
-ENV EMBEDDING_API_URL=$EMBEDDING_API_URL
-ENV EMBEDDING_API_KEY=$EMBEDDING_API_KEY
-ENV EMBEDDING_DIMENSIONS=$EMBEDDING_DIMENSIONS
-
 RUN npm run build
 
+FROM node:20-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/public ./public
+COPY --from=dependencies /app/node_modules ./node_modules
+COPY package.json ./
 EXPOSE 3000
-
-CMD ["npm", "run", "start"]
+CMD ["node", "server.js"]
