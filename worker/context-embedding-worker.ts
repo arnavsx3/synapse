@@ -8,13 +8,25 @@ import { getContextItem } from "@/lib/db/queries/context";
 import { upsertContextEmbedding } from "@/lib/db/queries/embeddings";
 import { embedText } from "@/lib/ai/embeddings";
 
-console.log("Context embedding worker started...");
+const workerConcurrency = Number.parseInt(
+  process.env.EMBEDDING_WORKER_CONCURRENCY ?? "2",
+  10,
+);
+
+if (!Number.isInteger(workerConcurrency) || workerConcurrency < 1) {
+  throw new Error("EMBEDDING_WORKER_CONCURRENCY must be a positive integer");
+}
 
 export const contextEmbeddingWorker = new Worker<ContextEmbeddingJobData>(
   CONTEXT_EMBEDDING_QUEUE_NAME,
   async (job) => {
     const item = await getContextItem(job.data.contextId);
-    if (!item) return;
+    if (!item) {
+      console.warn(
+        JSON.stringify({ event: "embedding_context_missing", jobId: job.id }),
+      );
+      return { skipped: true };
+    }
 
     const embedding = await embedText(item.content);
     await upsertContextEmbedding({
@@ -22,14 +34,71 @@ export const contextEmbeddingWorker = new Worker<ContextEmbeddingJobData>(
       embedding,
       sourceText: item.content,
     });
+
+    return { contextId: item.id };
   },
-  { connection: createWorkerConnection() },
+  {
+    connection: createWorkerConnection(),
+    concurrency: workerConcurrency,
+    lockDuration: 120_000,
+    maxStalledCount: 2,
+    stalledInterval: 30_000,
+  },
 );
 
 contextEmbeddingWorker.on("completed", (job) => {
-  console.log(`Context embedding completed: ${job.id}`);
+  console.log(JSON.stringify({ event: "embedding_completed", jobId: job.id }));
 });
 
 contextEmbeddingWorker.on("failed", (job, error) => {
-  console.error(`Context embedding failed: ${job?.id}`, error);
+  console.error(
+    JSON.stringify({
+      event: "embedding_failed",
+      jobId: job?.id,
+      error: error.message,
+      attemptsMade: job?.attemptsMade,
+    }),
+  );
+});
+
+contextEmbeddingWorker.on("error", (error) => {
+  console.error(
+    JSON.stringify({ event: "embedding_worker_error", error: error.message }),
+  );
+});
+
+console.log(
+  JSON.stringify({
+    event: "embedding_worker_started",
+    concurrency: workerConcurrency,
+  }),
+);
+
+let shuttingDown = false;
+
+async function shutdown(signal: string) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.log(JSON.stringify({ event: "embedding_worker_shutdown", signal }));
+
+  await contextEmbeddingWorker.close();
+  process.exit(0);
+}
+
+process.once("SIGTERM", () => void shutdown("SIGTERM"));
+process.once("SIGINT", () => void shutdown("SIGINT"));
+process.on("unhandledRejection", (reason) => {
+  console.error(
+    JSON.stringify({ event: "embedding_worker_unhandled_rejection", reason }),
+  );
+  process.exitCode = 1;
+});
+process.on("uncaughtException", (error) => {
+  console.error(
+    JSON.stringify({
+      event: "embedding_worker_uncaught_exception",
+      error: error.message,
+    }),
+  );
+  process.exit(1);
 });

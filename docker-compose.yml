@@ -30,7 +30,8 @@ services:
       EMBEDDING_DIMENSIONS: ${EMBEDDING_DIMENSIONS:-384}
     depends_on:
       redis:
-        condition: service_started
+        condition: service_healthy
+    restart: unless-stopped
 
   worker:
     build:
@@ -42,16 +43,31 @@ services:
       NODE_ENV: production
       DATABASE_URL: ${DATABASE_URL}
       REDIS_URL: redis://redis:6379
+      EMBEDDING_WORKER_CONCURRENCY: ${EMBEDDING_WORKER_CONCURRENCY:-2}
       EMBEDDING_API_URL: ${EMBEDDING_API_URL:-https://router.huggingface.co/hf-inference/models/sentence-transformers/all-MiniLM-L6-v2/pipeline/feature-extraction}
       EMBEDDING_API_KEY: ${EMBEDDING_API_KEY}
       EMBEDDING_MODEL: ${EMBEDDING_MODEL:-sentence-transformers/all-MiniLM-L6-v2}
       EMBEDDING_DIMENSIONS: ${EMBEDDING_DIMENSIONS:-384}
     depends_on:
       redis:
-        condition: service_started
+        condition: service_healthy
+    restart: unless-stopped
+    stop_grace_period: 2m
 
   redis:
     image: redis:7-alpine
     container_name: synapse-redis
     expose:
       - "6379"
+    command: redis-server --appendonly yes --appendfsync everysec --save 60 1000 --maxmemory-policy noeviction
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+volumes:
+  redis-data:
