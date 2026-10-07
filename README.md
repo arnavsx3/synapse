@@ -31,7 +31,7 @@ Browser → Nginx → Next.js App Router → Postgres
 1. Copy `.env.example` to `.env`.
 2. Add the fresh development `DATABASE_URL`.
 3. Add an `LLM_API_KEY` with Hugging Face Inference Providers permission.
-4. Add embedding provider values if you want asynchronous vector retrieval.
+4. Add the same token as `EMBEDDING_API_KEY`; the default embedding model is `sentence-transformers/all-MiniLM-L6-v2` with 384 dimensions.
 
 Install and run the app directly:
 

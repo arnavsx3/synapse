@@ -24,8 +24,9 @@ services:
       LLM_API_URL: ${LLM_API_URL:-https://router.huggingface.co/v1/chat/completions}
       LLM_API_KEY: ${LLM_API_KEY}
       LLM_MODEL: ${LLM_MODEL:-meta-llama/Llama-3.1-8B-Instruct}
-      EMBEDDING_API_URL: ${EMBEDDING_API_URL}
+      EMBEDDING_API_URL: ${EMBEDDING_API_URL:-https://router.huggingface.co/hf-inference/models/sentence-transformers/all-MiniLM-L6-v2/pipeline/feature-extraction}
       EMBEDDING_API_KEY: ${EMBEDDING_API_KEY}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-sentence-transformers/all-MiniLM-L6-v2}
       EMBEDDING_DIMENSIONS: ${EMBEDDING_DIMENSIONS:-384}
     depends_on:
       redis:
@@ -39,8 +40,9 @@ services:
       NODE_ENV: production
       DATABASE_URL: ${DATABASE_URL}
       REDIS_URL: redis://redis:6379
-      EMBEDDING_API_URL: ${EMBEDDING_API_URL}
+      EMBEDDING_API_URL: ${EMBEDDING_API_URL:-https://router.huggingface.co/hf-inference/models/sentence-transformers/all-MiniLM-L6-v2/pipeline/feature-extraction}
       EMBEDDING_API_KEY: ${EMBEDDING_API_KEY}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-sentence-transformers/all-MiniLM-L6-v2}
       EMBEDDING_DIMENSIONS: ${EMBEDDING_DIMENSIONS:-384}
     depends_on:
       redis:
