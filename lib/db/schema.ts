@@ -20,7 +20,7 @@ export const contextItems = pgTable(
     chunkCount: integer("chunk_count").notNull().default(0),
     embeddingStatus: text("embedding_status")
       .notNull()
-      .$type<"pending" | "processing" | "completed" | "failed">()
+      .$type<"pending" | "processing" | "completed" | "failed" | "degraded">()
       .default("pending"),
     embeddingError: text("embedding_error"),
     embeddingUpdatedAt: timestamp("embedding_updated_at"),

@@ -1,4 +1,4 @@
-import { Worker } from "bullmq";
+import { UnrecoverableError, Worker } from "bullmq";
 import { createWorkerConnection } from "@/lib/queue/connection";
 import {
   CONTEXT_EMBEDDING_QUEUE_NAME,
@@ -13,6 +13,7 @@ import {
 import { upsertContextChunkEmbedding } from "@/lib/db/queries/embeddings";
 import { EMBEDDING_MODEL, embedText } from "@/lib/ai/embeddings";
 import { getSafeProviderMessage } from "@/lib/ai/provider-error";
+import { ProviderError } from "@/lib/ai/provider-error";
 import { chunkText } from "@/lib/rag/chunking";
 
 const workerConcurrency = Number.parseInt(
@@ -58,7 +59,21 @@ export const contextEmbeddingWorker = new Worker<ContextEmbeddingJobData>(
       await updateContextEmbeddingStatus(item.id, "completed");
     } catch (error) {
       const message = getSafeProviderMessage(error);
-      await updateContextEmbeddingStatus(item.id, "failed", message);
+      if (
+        error instanceof ProviderError &&
+        ["quota_exhausted", "configuration", "invalid_response"].includes(error.code)
+      ) {
+        await updateContextEmbeddingStatus(item.id, "degraded", message);
+        throw new UnrecoverableError(message);
+      }
+
+      const attempts = job.opts.attempts ?? 1;
+      const finalAttempt = job.attemptsMade + 1 >= attempts;
+      await updateContextEmbeddingStatus(
+        item.id,
+        finalAttempt ? "failed" : "processing",
+        finalAttempt ? message : null,
+      );
       throw error;
     }
 

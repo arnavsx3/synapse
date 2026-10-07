@@ -28,6 +28,7 @@ export default function ChatPage() {
   const [contexts, setContexts] = useState<ContextItem[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
+  const [contextStatus, setContextStatus] = useState("");
   const bottom = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -43,6 +44,19 @@ export default function ChatPage() {
   useEffect(() => {
     bottom.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  async function removeContext(id: string, name: string) {
+    if (!window.confirm(`Remove ${name} from memory?`)) return;
+
+    const response = await fetch(`/api/context/${id}`, { method: "DELETE" });
+    if (!response.ok) {
+      setContextStatus("Could not remove that context.");
+      return;
+    }
+
+    setContexts((current) => current.filter((item) => item.id !== id));
+    setContextStatus(`${name} removed.`);
+  }
 
   async function sendMessage(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -98,7 +112,8 @@ export default function ChatPage() {
       <section className="chat-layout">
         <aside className="context-sidebar pixel-panel">
           <div className="section-heading"><span>LOADED_CONTEXT</span><small>{contexts.length.toString().padStart(2, "0")}</small></div>
-          {contexts.length === 0 ? <p className="empty-state">Nothing loaded. Go back and add your context.</p> : contexts.map((item) => <div className="sidebar-context" key={item.id}><span className="file-icon">{item.sourceType.toUpperCase()}</span><span>{item.name}</span><small>{item.embeddingStatus?.toUpperCase()}</small></div>)}
+          {contexts.length === 0 ? <p className="empty-state">Nothing loaded. Go back and add your context.</p> : contexts.map((item) => <div className="sidebar-context" key={item.id}><span className="file-icon">{item.sourceType.toUpperCase()}</span><span>{item.name}</span><small>{item.embeddingStatus === "degraded" ? "FALLBACK" : item.embeddingStatus?.toUpperCase()}</small><button className="context-delete" onClick={() => void removeContext(item.id, item.name)} aria-label={`Remove ${item.name}`}>×</button></div>)}
+          {contextStatus && <p className="form-status">{contextStatus}</p>}
           <Link href="/" className="sidebar-link">+ ADD MORE CONTEXT</Link>
         </aside>
         <section className="chat-console pixel-panel">

@@ -17,6 +17,7 @@ export const EMBEDDING_STATUS_VALUES = [
   "processing",
   "completed",
   "failed",
+  "degraded",
 ] as const;
 
 export type EmbeddingStatus = (typeof EMBEDDING_STATUS_VALUES)[number];
