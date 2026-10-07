@@ -24,14 +24,16 @@ Browser → Nginx → Next.js App Router → Postgres
 - Postgres stores context items, embeddings, and chat messages.
 - Redis and BullMQ process context embeddings asynchronously.
 - Retrieval uses vector similarity when embeddings are available, with a keyword fallback for local development.
-- Chat uses Hugging Face Inference Providers by default through its OpenAI-compatible endpoint; the model and endpoint are configurable.
+- Chat uses the open-weight `TinyLlama/TinyLlama-1.1B-Chat-v1.0` model through Hugging Face's OpenAI-compatible endpoint; the model and endpoint are configurable.
 
 ## Local setup
 
 1. Copy `.env.example` to `.env`.
 2. Add the fresh development `DATABASE_URL`.
 3. Add an `LLM_API_KEY` with Hugging Face Inference Providers permission.
-4. Add the same token as `EMBEDDING_API_KEY`; the default embedding model is `sentence-transformers/all-MiniLM-L6-v2` with 384 dimensions.
+4. Add the same token as `EMBEDDING_API_KEY`; the default embedding model is the Apache-2.0 `sentence-transformers/all-MiniLM-L6-v2` with 384 dimensions.
+
+The models are free/open-weight to use under their respective licenses, but hosted inference requests can still consume Hugging Face/provider quota.
 
 Install and run the app directly:
 

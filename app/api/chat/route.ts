@@ -33,7 +33,8 @@ export async function POST(request: NextRequest) {
     const history = await listChatMessages();
     const apiKey = process.env.LLM_API_KEY;
     const apiUrl = process.env.LLM_API_URL ?? "https://router.huggingface.co/v1/chat/completions";
-    const model = process.env.LLM_MODEL ?? "meta-llama/Llama-3.1-8B-Instruct";
+    const model =
+      process.env.LLM_MODEL ?? "TinyLlama/TinyLlama-1.1B-Chat-v1.0";
 
     let reply = `I found ${contextItems.length} context source${contextItems.length === 1 ? "" : "s"}. Ask me something about it.`;
 
