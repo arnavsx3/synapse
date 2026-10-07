@@ -1,5 +1,5 @@
 import { and, eq, sql } from "drizzle-orm";
-import { db } from "../client";
+import { getDb } from "../client";
 import { contextEmbeddings, contextItems } from "../schema";
 
 const toVectorLiteral = (values: number[]) => `[${values.join(",")}]`;
@@ -9,6 +9,7 @@ export async function upsertContextEmbedding(data: {
   embedding: number[];
   sourceText: string;
 }) {
+  const db = getDb();
   const embeddingSql = sql.raw(`'${toVectorLiteral(data.embedding)}'::vector`);
 
   await db
@@ -33,6 +34,7 @@ export async function getRelevantContextItems(
   queryEmbedding: number[],
   limit = 6,
 ) {
+  const db = getDb();
   const queryVectorSql = sql.raw(`'${toVectorLiteral(queryEmbedding)}'::vector`);
   const similarity = sql<number>`1 - (${contextEmbeddings.embedding} <=> ${queryVectorSql})`;
 

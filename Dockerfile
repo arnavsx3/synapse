@@ -16,8 +16,10 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
-COPY --from=builder /app/public ./public
 COPY --from=dependencies /app/node_modules ./node_modules
 COPY package.json ./
+COPY --from=builder /app/lib ./lib
+COPY --from=builder /app/worker ./worker
+COPY --from=builder /app/tsconfig.json ./tsconfig.json
 EXPOSE 3000
 CMD ["node", "server.js"]
