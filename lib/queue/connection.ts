@@ -14,6 +14,10 @@ function getRedisUrl() {
 export function createQueueConnection() {
   return new Redis(getRedisUrl(), {
     maxRetriesPerRequest: 1,
+    connectTimeout: 1000,
+    enableOfflineQueue: false,
+    lazyConnect: true,
+    retryStrategy: () => null,
   });
 }
 
