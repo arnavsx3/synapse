@@ -59,6 +59,6 @@ export interface ServerToClientEvents {
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface ClientToServerEvents {}
 
-export function getUserRoom(userId: string) {
-  return `user:${userId}`;
+export function getAppRoom() {
+  return "synapse";
 }

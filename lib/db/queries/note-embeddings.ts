@@ -45,38 +45,6 @@ export const deleteNoteEmbeddingByNoteId = async (
   return deleted;
 };
 
-export const getSemanticRelevantNotesByUser = async (
-  _scopeId: string,
-  queryEmbedding: number[],
-  limit = 5,
-) => {
-  const queryVectorSql = sql.raw(
-    `'${toVectorLiteral(queryEmbedding)}'::vector`,
-  );
-  const similarity = sql<number>`
-    1 - (${noteEmbeddings.embedding} <=> ${queryVectorSql})
-  `;
-
-  return await db
-    .select({
-      id: notes.id,
-      title: notes.title,
-      content: notes.content,
-      workspaceId: notes.workspaceId,
-      projectId: notes.projectId,
-      projectName: projects.name,
-      createdAt: notes.createdAt,
-      updatedAt: notes.updatedAt,
-      sourceText: noteEmbeddings.sourceText,
-      similarity,
-    })
-    .from(noteEmbeddings)
-    .innerJoin(notes, eq(noteEmbeddings.noteId, notes.id))
-    .leftJoin(projects, eq(notes.projectId, projects.id))
-    .orderBy(sql`${similarity} desc`)
-    .limit(limit);
-};
-
 export const getSemanticRelevantNotesByWorkspace = async (
   workspaceId: string,
   queryEmbedding: number[],

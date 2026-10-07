@@ -4,7 +4,6 @@ export type Project = {
   id: string;
   name: string;
   description: string | null;
-  userId: string;
   workspaceId: string;
   createdAt: string | null;
   updatedAt: string | null;

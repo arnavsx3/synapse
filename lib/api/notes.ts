@@ -4,7 +4,6 @@ export type Note = {
   id: string;
   title: string;
   content: string | null;
-  userId: string;
   workspaceId: string;
   projectId: string | null;
   createdAt: string | null;

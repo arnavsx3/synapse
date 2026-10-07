@@ -2,7 +2,7 @@ import Redis from "ioredis";
 import { Emitter } from "@socket.io/redis-emitter";
 import {
   REALTIME_EVENTS,
-  getUserRoom,
+  getAppRoom,
   type WorkspaceChangedPayload,
   type ChatChangedPayload,
   type ChatMessageCreatedPayload,
@@ -41,69 +41,43 @@ function getEmitter() {
   return emitter;
 }
 
-function emitToUser<EventPayload>(
-  userId: string,
+function emitToApp<EventPayload>(
   eventName: string,
   payload: EventPayload,
 ) {
   try {
-    getEmitter().to(getUserRoom(userId)).emit(eventName, payload);
+    getEmitter().to(getAppRoom()).emit(eventName, payload);
   } catch (error) {
     console.error(`Realtime emit failed for ${eventName}:`, error);
   }
 }
 
 export function emitWorkspaceChanged(
-  userIdOrPayload: string | WorkspaceChangedPayload,
-  legacyPayload?: WorkspaceChangedPayload,
+  payload: WorkspaceChangedPayload,
 ) {
-  emitToUser(
-    "synapse",
-    REALTIME_EVENTS.WORKSPACE_CHANGED,
-    typeof userIdOrPayload === "string" ? legacyPayload! : userIdOrPayload,
-  );
+  emitToApp(REALTIME_EVENTS.WORKSPACE_CHANGED, payload);
 }
 
 export function emitProjectChanged(
-  userIdOrPayload: string | ProjectChangedPayload,
-  legacyPayload?: ProjectChangedPayload,
+  payload: ProjectChangedPayload,
 ) {
-  emitToUser(
-    "synapse",
-    REALTIME_EVENTS.PROJECT_CHANGED,
-    typeof userIdOrPayload === "string" ? legacyPayload! : userIdOrPayload,
-  );
+  emitToApp(REALTIME_EVENTS.PROJECT_CHANGED, payload);
 }
 
 export function emitNoteChanged(
-  userIdOrPayload: string | NoteChangedPayload,
-  legacyPayload?: NoteChangedPayload,
+  payload: NoteChangedPayload,
 ) {
-  emitToUser(
-    "synapse",
-    REALTIME_EVENTS.NOTE_CHANGED,
-    typeof userIdOrPayload === "string" ? legacyPayload! : userIdOrPayload,
-  );
+  emitToApp(REALTIME_EVENTS.NOTE_CHANGED, payload);
 }
 
 export function emitChatChanged(
-  userIdOrPayload: string | ChatChangedPayload,
-  legacyPayload?: ChatChangedPayload,
+  payload: ChatChangedPayload,
 ) {
-  emitToUser(
-    "synapse",
-    REALTIME_EVENTS.CHAT_CHANGED,
-    typeof userIdOrPayload === "string" ? legacyPayload! : userIdOrPayload,
-  );
+  emitToApp(REALTIME_EVENTS.CHAT_CHANGED, payload);
 }
 
 export function emitChatMessageCreated(
-  userIdOrPayload: string | ChatMessageCreatedPayload,
-  legacyPayload?: ChatMessageCreatedPayload,
+  payload: ChatMessageCreatedPayload,
 ) {
-  emitToUser(
-    "synapse",
-    REALTIME_EVENTS.CHAT_MESSAGE_CREATED,
-    typeof userIdOrPayload === "string" ? legacyPayload! : userIdOrPayload,
-  );
+  emitToApp(REALTIME_EVENTS.CHAT_MESSAGE_CREATED, payload);
 }

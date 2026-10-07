@@ -3,7 +3,6 @@ import { workspaceParamsSchema } from "@/lib/validators/workspaces";
 
 export async function getAuthorizedWorkspace(
   paramsPromise: Promise<{ workspaceId: string }>,
-  _scopeId?: string,
 ) {
   const params = await paramsPromise;
   const parsed = workspaceParamsSchema.safeParse(params);

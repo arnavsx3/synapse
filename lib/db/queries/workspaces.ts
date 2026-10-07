@@ -39,7 +39,6 @@ export const getFirstWorkspace = async () => {
 export const updateWorkspace = async (
   id: string,
   data: UpdateWorkspace,
-  _scopeId?: string,
 ) => {
   const [workspace] = await db
     .update(workspaces)
@@ -50,7 +49,7 @@ export const updateWorkspace = async (
   return workspace;
 };
 
-export const deleteWorkspace = async (id: string, _scopeId?: string) => {
+export const deleteWorkspace = async (id: string) => {
   const [workspace] = await db
     .delete(workspaces)
     .where(eq(workspaces.id, id))

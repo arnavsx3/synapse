@@ -10,20 +10,12 @@ export const createProject = async (data: CreateProject) => {
   return project;
 };
 
-export const getProjectsByUser = async (_scopeId: string) =>
-  db.select().from(projects).orderBy(desc(projects.updatedAt), desc(projects.createdAt));
-
 export const getProjectsByWorkspace = async (workspaceId: string) =>
   db
     .select()
     .from(projects)
     .where(eq(projects.workspaceId, workspaceId))
     .orderBy(desc(projects.updatedAt), desc(projects.createdAt));
-
-export const getProjectByUser = async (id: string, _scopeId: string) => {
-  const [project] = await db.select().from(projects).where(eq(projects.id, id));
-  return project;
-};
 
 export const getProjectByWorkspace = async (
   id: string,
@@ -36,19 +28,6 @@ export const getProjectByWorkspace = async (
   return project;
 };
 
-export const updateProject = async (
-  id: string,
-  data: UpdateProject,
-  _scopeId: string,
-) => {
-  const [project] = await db
-    .update(projects)
-    .set({ ...data, updatedAt: new Date() })
-    .where(eq(projects.id, id))
-    .returning();
-  return project;
-};
-
 export const updateProjectInWorkspace = async (
   id: string,
   data: UpdateProject,
@@ -58,14 +37,6 @@ export const updateProjectInWorkspace = async (
     .update(projects)
     .set({ ...data, updatedAt: new Date() })
     .where(and(eq(projects.id, id), eq(projects.workspaceId, workspaceId)))
-    .returning();
-  return project;
-};
-
-export const deleteProject = async (id: string, _scopeId: string) => {
-  const [project] = await db
-    .delete(projects)
-    .where(eq(projects.id, id))
     .returning();
   return project;
 };

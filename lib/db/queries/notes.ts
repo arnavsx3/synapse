@@ -11,10 +11,7 @@ export const createNote = async (data: CreateNote) => {
   return note;
 };
 
-export const getNotesByUser = async (
-  _scopeId: string,
-  projectId?: NotesProjectFilter,
-) => {
+export const getNotes = async (projectId?: NotesProjectFilter) => {
   if (projectId === "inbox") {
     return db.select().from(notes).where(isNull(notes.projectId)).orderBy(desc(notes.updatedAt), desc(notes.createdAt));
   }
@@ -38,22 +35,12 @@ export const getNotesByWorkspace = async (
   return db.select().from(notes).where(workspaceFilter).orderBy(desc(notes.updatedAt), desc(notes.createdAt));
 };
 
-export const updateNote = async (id: string, data: UpdateNote, _scopeId: string) => {
-  const [note] = await db.update(notes).set({ ...data, updatedAt: new Date() }).where(eq(notes.id, id)).returning();
-  return note;
-};
-
 export const updateNoteInWorkspace = async (
   id: string,
   data: UpdateNote,
   workspaceId: string,
 ) => {
   const [note] = await db.update(notes).set({ ...data, updatedAt: new Date() }).where(and(eq(notes.id, id), eq(notes.workspaceId, workspaceId))).returning();
-  return note;
-};
-
-export const deleteNote = async (id: string, _scopeId: string) => {
-  const [note] = await db.delete(notes).where(eq(notes.id, id)).returning();
   return note;
 };
 

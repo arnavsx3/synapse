@@ -3,7 +3,6 @@ import { api } from "./client";
 export type Chat = {
   id: string;
   title: string;
-  userId: string;
   workspaceId: string;
   createdAt: string | null;
   updatedAt: string | null;

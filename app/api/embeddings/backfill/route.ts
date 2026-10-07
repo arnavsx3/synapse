@@ -1,16 +1,10 @@
 import { NextResponse } from "next/server";
-import { getAppContext } from "@/lib/app-context";
-import { getNotesByUser } from "@/lib/db/queries/notes";
+import { getNotes } from "@/lib/db/queries/notes";
 import { enqueueNoteEmbeddingJob } from "@/lib/queue/note-embedding";
 
 export async function POST() {
   try {
-    const session = await getAppContext();
-    if (!session?.user?.id) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-    }
-
-    const notes = await getNotesByUser(session.user.id);
+    const notes = await getNotes();
 
     let queuedCount = 0;
     let failedCount = 0;
