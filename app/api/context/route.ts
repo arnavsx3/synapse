@@ -7,6 +7,7 @@ import {
 import {
   createContextItem,
   listContextItems,
+  updateContextEmbeddingStatus,
 } from "@/lib/db/queries/context";
 import { enqueueContextEmbeddingJob } from "@/lib/queue/context-embedding";
 
@@ -66,9 +67,15 @@ export async function POST(request: NextRequest) {
       characterCount: content.length,
     });
 
+    let embeddingStatus: "pending" | "failed" = "pending";
+    let embeddingError: string | undefined;
+
     try {
       await enqueueContextEmbeddingJob(item.id);
     } catch (error) {
+      embeddingStatus = "failed";
+      embeddingError = error instanceof Error ? error.message : "Queue unavailable";
+      await updateContextEmbeddingStatus(item.id, "failed", embeddingError);
       console.error("Context embedding queue error:", error);
     }
 
@@ -79,9 +86,11 @@ export async function POST(request: NextRequest) {
           name: item.name,
           sourceType: item.sourceType,
           characterCount: item.characterCount,
+          embeddingStatus,
+          embeddingError,
         },
       },
-      { status: 201 },
+      { status: embeddingStatus === "failed" ? 202 : 201 },
     );
   } catch (error) {
     console.error("Context ingestion error:", error);

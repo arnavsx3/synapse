@@ -24,7 +24,9 @@ Browser → Nginx → Next.js App Router → Postgres
 - Postgres stores context items, embeddings, and chat messages.
 - Redis and BullMQ process context embeddings asynchronously.
 - Redis uses AOF persistence in Compose; embedding jobs retry four times with exponential backoff, retain recent failures for inspection, and are processed by a gracefully shutting-down worker with configurable concurrency.
-- Retrieval uses vector similarity when embeddings are available, with a keyword fallback for local development.
+- The RAG pipeline chunks each document with overlap, stores character offsets and source metadata, and embeds each chunk independently.
+- Retrieval returns diverse chunk-level matches with source references. If embeddings are pending, unavailable, rate-limited, or over quota, it switches to weighted keyword search and reports the degraded mode.
+- Context items expose `pending`, `processing`, `completed`, and `failed` embedding status so indexing failures are visible instead of silently disappearing.
 - Chat uses the open-weight `TinyLlama/TinyLlama-1.1B-Chat-v1.0` model through Hugging Face's OpenAI-compatible endpoint; the model and endpoint are configurable.
 
 ## Local setup
@@ -34,6 +36,14 @@ Browser → Nginx → Next.js App Router → Postgres
 3. Add an `LLM_API_KEY` with Hugging Face Inference Providers permission.
 4. Add the same token as `EMBEDDING_API_KEY`; the default embedding model is the Apache-2.0 `sentence-transformers/all-MiniLM-L6-v2` with 384 dimensions.
 5. Tune `EMBEDDING_WORKER_CONCURRENCY` if the embedding provider allows more or fewer concurrent requests.
+
+Apply the chunked-RAG migration before starting the app against an existing database:
+
+```bash
+npm run db:migrate
+```
+
+The migration preserves existing single-document embeddings as legacy chunks. New uploads are split into overlapping chunks by the worker.
 
 The models are free/open-weight to use under their respective licenses, but hosted inference requests can still consume Hugging Face/provider quota.
 
@@ -50,6 +60,14 @@ Run the worker separately when using Redis:
 npm run worker
 ```
 
+Run the automated checks:
+
+```bash
+npm test
+npm run lint
+npx tsc --noEmit
+```
+
 ## Docker Compose
 
 Compose runs Nginx, the standalone Next.js image, the context embedding worker, and Redis:
@@ -59,6 +77,10 @@ docker compose up --build
 ```
 
 Open [http://localhost:3000](http://localhost:3000). Nginx is the only exposed application service.
+
+### Hosted inference fallback
+
+The default Hugging Face models are open-weight, but hosted inference still depends on provider quota. A `402` response marks semantic retrieval as quota-limited and activates keyword retrieval; a `429` response reports rate limiting and does the same. If the chat provider is unavailable, Synapse stores a local response with the retrieval sources and a warning instead of failing the request entirely.
 
 ## Useful scripts
 

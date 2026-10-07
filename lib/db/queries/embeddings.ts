@@ -1,13 +1,19 @@
-import { and, eq, sql } from "drizzle-orm";
+import { desc, eq, sql } from "drizzle-orm";
 import { getDb } from "../client";
-import { contextEmbeddings, contextItems } from "../schema";
+import { contextChunks, contextEmbeddings, contextItems } from "../schema";
 
-const toVectorLiteral = (values: number[]) => `[${values.join(",")}]`;
+const toVectorLiteral = (values: number[]) => {
+  if (values.some((value) => !Number.isFinite(value))) {
+    throw new Error("Embedding contains a non-finite value.");
+  }
 
-export async function upsertContextEmbedding(data: {
-  contextId: string;
+  return `[${values.join(",")}]`;
+};
+
+export async function upsertContextChunkEmbedding(data: {
+  chunkId: string;
   embedding: number[];
-  sourceText: string;
+  model: string;
 }) {
   const db = getDb();
   const embeddingSql = sql.raw(`'${toVectorLiteral(data.embedding)}'::vector`);
@@ -15,24 +21,25 @@ export async function upsertContextEmbedding(data: {
   await db
     .insert(contextEmbeddings)
     .values({
-      contextId: data.contextId,
+      chunkId: data.chunkId,
       embedding: embeddingSql,
-      sourceText: data.sourceText,
+      model: data.model,
       updatedAt: new Date(),
     })
     .onConflictDoUpdate({
-      target: contextEmbeddings.contextId,
+      target: contextEmbeddings.chunkId,
       set: {
         embedding: embeddingSql,
-        sourceText: data.sourceText,
+        model: data.model,
         updatedAt: new Date(),
       },
     });
 }
 
-export async function getRelevantContextItems(
+export async function getRelevantContextChunks(
   queryEmbedding: number[],
-  limit = 6,
+  limit = 8,
+  minimumSimilarity = 0.2,
 ) {
   const db = getDb();
   const queryVectorSql = sql.raw(`'${toVectorLiteral(queryEmbedding)}'::vector`);
@@ -40,15 +47,20 @@ export async function getRelevantContextItems(
 
   return db
     .select({
-      id: contextItems.id,
+      id: contextChunks.id,
+      contextId: contextItems.id,
       name: contextItems.name,
-      content: contextItems.content,
       sourceType: contextItems.sourceType,
+      content: contextChunks.content,
+      chunkIndex: contextChunks.chunkIndex,
+      startChar: contextChunks.startChar,
+      endChar: contextChunks.endChar,
       similarity,
     })
     .from(contextEmbeddings)
-    .innerJoin(contextItems, eq(contextEmbeddings.contextId, contextItems.id))
-    .where(and(sql`${contextEmbeddings.embedding} is not null`))
-    .orderBy(sql`${similarity} desc`)
+    .innerJoin(contextChunks, eq(contextEmbeddings.chunkId, contextChunks.id))
+    .innerJoin(contextItems, eq(contextChunks.contextId, contextItems.id))
+    .where(sql`${similarity} >= ${minimumSimilarity}`)
+    .orderBy(desc(similarity))
     .limit(limit);
 }

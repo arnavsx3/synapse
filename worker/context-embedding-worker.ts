@@ -5,8 +5,15 @@ import {
   type ContextEmbeddingJobData,
 } from "@/lib/queue/queues";
 import { getContextItem } from "@/lib/db/queries/context";
-import { upsertContextEmbedding } from "@/lib/db/queries/embeddings";
-import { embedText } from "@/lib/ai/embeddings";
+import {
+  listContextChunks,
+  replaceContextChunks,
+  updateContextEmbeddingStatus,
+} from "@/lib/db/queries/context";
+import { upsertContextChunkEmbedding } from "@/lib/db/queries/embeddings";
+import { EMBEDDING_MODEL, embedText } from "@/lib/ai/embeddings";
+import { getSafeProviderMessage } from "@/lib/ai/provider-error";
+import { chunkText } from "@/lib/rag/chunking";
 
 const workerConcurrency = Number.parseInt(
   process.env.EMBEDDING_WORKER_CONCURRENCY ?? "2",
@@ -28,12 +35,32 @@ export const contextEmbeddingWorker = new Worker<ContextEmbeddingJobData>(
       return { skipped: true };
     }
 
-    const embedding = await embedText(item.content);
-    await upsertContextEmbedding({
-      contextId: item.id,
-      embedding,
-      sourceText: item.content,
-    });
+    await updateContextEmbeddingStatus(item.id, "processing");
+
+    try {
+      const chunks = chunkText(item.content);
+      await replaceContextChunks(item.id, chunks);
+      const storedChunks = await listContextChunks(item.id);
+
+      for (const [index, chunk] of chunks.entries()) {
+        const embedding = await embedText(chunk.content);
+        const storedChunk = storedChunks[index];
+        if (!storedChunk) throw new Error("Chunk disappeared during embedding.");
+
+        await upsertContextChunkEmbedding({
+          chunkId: storedChunk.id,
+          embedding,
+          model: EMBEDDING_MODEL,
+        });
+        await job.updateProgress(Math.round(((index + 1) / chunks.length) * 100));
+      }
+
+      await updateContextEmbeddingStatus(item.id, "completed");
+    } catch (error) {
+      const message = getSafeProviderMessage(error);
+      await updateContextEmbeddingStatus(item.id, "failed", message);
+      throw error;
+    }
 
     return { contextId: item.id };
   },

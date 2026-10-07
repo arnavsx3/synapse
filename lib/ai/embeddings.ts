@@ -1,5 +1,5 @@
-const EMBEDDING_DIMENSIONS = Number(process.env.EMBEDDING_DIMENSIONS ?? 384);
-const EMBEDDING_MODEL =
+export const EMBEDDING_DIMENSIONS = Number(process.env.EMBEDDING_DIMENSIONS ?? 384);
+export const EMBEDDING_MODEL =
   process.env.EMBEDDING_MODEL ?? "sentence-transformers/all-MiniLM-L6-v2";
 
 function getEmbeddingApiUrl() {
@@ -55,7 +55,7 @@ export async function embedText(text: string) {
 
   const apiKey = process.env.EMBEDDING_API_KEY;
   if (!apiKey) {
-    throw new Error("Missing EMBEDDING_API_KEY.");
+    throw new ProviderError("Missing EMBEDDING_API_KEY.", "configuration");
   }
 
   try {
@@ -85,24 +85,40 @@ export async function embedText(text: string) {
         typeof responseData === "string"
           ? responseData
           : JSON.stringify(responseData);
-      throw new Error(`Embedding provider returned ${response.status}: ${detail}`);
+      throw new ProviderError(
+        `Embedding provider returned ${response.status}: ${detail}`,
+        getProviderErrorCode(response.status),
+        response.status,
+      );
     }
 
     const embedding = parseEmbedding(responseData);
 
     if (!Array.isArray(embedding)) {
-      throw new Error("Embedding response did not contain a valid vector.");
+      throw new ProviderError(
+        "Embedding response did not contain a valid vector.",
+        "invalid_response",
+      );
     }
 
     if (embedding.length !== EMBEDDING_DIMENSIONS) {
-      throw new Error(
+      throw new ProviderError(
         `Embedding dimensions mismatch. Expected ${EMBEDDING_DIMENSIONS}, got ${embedding.length}.`,
+        "invalid_response",
       );
     }
 
     return embedding as number[];
   } catch (error) {
+    if (error instanceof ProviderError) throw error;
     const errorText = error instanceof Error ? error.message : "Unknown error";
-    throw new Error(`Embedding request failed: ${errorText}`);
+    throw new ProviderError(
+      `Embedding request failed: ${errorText}`,
+      "unknown",
+    );
   }
 }
+import {
+  getProviderErrorCode,
+  ProviderError,
+} from "./provider-error";
