@@ -1,85 +1,62 @@
 # Synapse
 
-Synapse is a full-stack knowledge workspace that combines notes, projects, semantic retrieval, AI chat, background processing, and realtime updates in one app. The project began as a learning-first SaaS sandbox and has gradually grown into a broader systems-learning playground.
+Synapse is a context-first chat arcade. Add text or upload `.txt`, `.md`, PDF, or `.docx` files, then chat with an assistant grounded in that context.
 
-## Overview
+## Product shape
 
-Synapse is built around a workspace model where users can organize projects and notes, then use AI features on top of that data. The app now includes:
+The app intentionally has only two pages:
 
-- local workspace context without authentication
-- workspace, project, note, and chat flows
-- semantic note retrieval with embeddings
-- AI chat grounded in user data
-- background jobs for embedding generation
-- realtime updates with Socket.IO
-- Docker-based orchestration for the local runtime services
+- `/` — the arcade-themed context console for pasting text, uploading files, and managing memory.
+- `/chat` — the chat console with loaded context visible beside the conversation.
 
-## Current Scope
-
-The repo now spans much more than the early setup phases. In practical terms, it includes:
-
-- Next.js App Router frontend
-- custom Node server for Next.js plus Socket.IO
-- Drizzle ORM with Neon Postgres
-- pgvector-based note embeddings
-- BullMQ worker processing
-- Redis-backed queue and pub/sub behavior
-- Groq-powered assistant responses
-- Docker Compose for local orchestration of app, worker, and Redis
-
-## Tech Stack
-
-### Frontend
-
-- Next.js 16
-- React 19
-- TypeScript
-- Tailwind CSS
-- TanStack Query
-- Zustand
-
-### Backend And Infra
-
-- Next.js route handlers
-- custom Node HTTP server
-- Drizzle ORM
-- Neon Postgres
-- pgvector
-- Redis
-- BullMQ
-- Socket.IO
-- Docker
-- Docker Compose
-
-### AI
-
-- Groq API
-- external embedding API
+There are no accounts, workspaces, projects, workflows, or custom server layer.
 
 ## Architecture
 
-The app uses a custom server in [server.ts](/D:/PROJECTS/synapse/server.ts:1) so the HTTP layer and Socket.IO server run together. Background embedding work is processed separately by [worker/note-embedding-worker.ts](/D:/PROJECTS/synapse/worker/note-embedding-worker.ts:1). Redis is used for BullMQ jobs and Redis-backed realtime messaging. PostgreSQL is currently provided by Neon, and note embeddings are stored with `pgvector`.
+```text
+Browser → Nginx → Next.js App Router → Postgres
+                              ├──────→ Redis → embedding worker
+                              └──────→ hosted Llama-compatible API
+```
 
-## Runtime Context
+- Next.js App Router serves the UI and route handlers.
+- Nginx is the local reverse proxy and the future Kubernetes ingress edge.
+- Postgres stores context items, embeddings, and chat messages.
+- Redis and BullMQ process context embeddings asynchronously.
+- Retrieval uses vector similarity when embeddings are available, with a keyword fallback for local development.
+- Chat uses Hugging Face Inference Providers by default through its OpenAI-compatible endpoint; the model and endpoint are configurable.
 
-Authentication has been removed from the local application. The app bootstraps one local workspace context so the core notes, projects, chats, embeddings, and realtime flows can be developed without sign-in or protected routes.
+## Local setup
 
-## Main Runtime Pieces
+1. Copy `.env.example` to `.env`.
+2. Add the fresh development `DATABASE_URL`.
+3. Add an `LLM_API_KEY` with Hugging Face Inference Providers permission.
+4. Add embedding provider values if you want asynchronous vector retrieval.
 
-The app currently has three local runtime services:
+Install and run the app directly:
 
-1. `app`
-   Serves the UI, API routes, and Socket.IO connection.
+```bash
+npm install
+npm run dev
+```
 
-2. `worker`
-   Processes note embedding jobs in the background.
+Run the worker separately when using Redis:
 
-3. `redis`
-   Supports BullMQ and Redis-based realtime behavior.
+```bash
+npm run worker
+```
 
-Postgres is not containerized in the current setup. The app still connects to Neon through `DATABASE_URL`.
+## Docker Compose
 
-## Scripts
+Compose runs Nginx, the standalone Next.js image, the context embedding worker, and Redis:
+
+```bash
+docker compose up --build
+```
+
+Open [http://localhost:3000](http://localhost:3000). Nginx is the only exposed application service.
+
+## Useful scripts
 
 ```bash
 npm run dev
@@ -89,110 +66,6 @@ npm run start
 npm run lint
 ```
 
-## Environment Variables
+## Next deployment targets
 
-Create a `.env` file in the project root and provide values for:
-
-```env
-DATABASE_URL=
-REDIS_URL=
-GROQ_API_KEY=
-EMBEDDING_API_URL=
-EMBEDDING_API_KEY=
-EMBEDDING_DIMENSIONS=384
-```
-
-### Notes
-
-- In the current Docker setup, `DATABASE_URL` should still point to Neon.
-- Inside Docker Compose, Redis is addressed as `redis://redis:6379`.
-
-## Local Development
-
-Install dependencies:
-
-```bash
-npm install
-```
-
-Run the app:
-
-```bash
-npm run dev
-```
-
-Run the worker in a separate terminal:
-
-```bash
-npm run worker
-```
-
-Make sure Redis and your required environment variables are available before testing queue, embedding, AI, or realtime flows.
-
-## Docker Setup
-
-This repo includes a first-pass Docker setup focused on local orchestration rather than full infrastructure replacement.
-
-### What Docker Runs
-
-- `synapse-app`
-- `synapse-worker`
-- `synapse-redis`
-
-### What Stays External
-
-- Neon Postgres
-- external AI and embedding providers
-
-### Start The Stack
-
-From the project root:
-
-```bash
-docker compose up --build
-```
-
-### Stop The Stack
-
-```bash
-docker compose down
-```
-
-### Useful Commands
-
-```bash
-docker compose up --build
-docker compose down
-docker compose logs -f app
-docker compose logs -f worker
-docker compose logs -f redis
-```
-
-### What A Healthy Docker Run Looks Like
-
-You should be able to confirm that:
-
-- the app opens at `http://localhost:3000`
-  - the workspace directory opens without a login step
-- editing a note triggers an embedding job
-- the worker logs show `Embedding job completed: ...`
-- realtime socket connections join successfully
-
-## Core Flow
-
-The main end-to-end flow in this repo looks like this:
-
-1. a user creates or updates a note
-2. the note is stored in Postgres
-3. the app enqueues an embedding job through Redis and BullMQ
-4. the worker generates and stores the embedding
-5. assistant requests retrieve relevant notes semantically
-6. Groq receives grounded context and returns the response
-
-## Why This Repo Exists
-
-Even though the app now includes several production-style parts, this project is still primarily a learning workspace. The goal is to understand how the pieces fit together, iterate phase by phase, and keep tradeoffs visible rather than pretending the project is optimized for purity above learning value.
-
-## License
-
-MIT
+The container boundaries map directly to the planned EKS deployment: Nginx ingress, Synapse app, context embedding worker, and Redis. Kubernetes manifests and ArgoCD GitOps configuration will follow after the local core is stable.

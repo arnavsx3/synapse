@@ -31,9 +31,9 @@ export async function POST(request: NextRequest) {
     const contextItems = await retrieveContext(message);
     const context = formatContext(contextItems);
     const history = await listChatMessages();
-    const apiKey = process.env.LLM_API_KEY ?? process.env.GROQ_API_KEY;
-    const apiUrl = process.env.LLM_API_URL ?? "https://api.groq.com/openai/v1/chat/completions";
-    const model = process.env.LLM_MODEL ?? "llama-3.3-70b-versatile";
+    const apiKey = process.env.LLM_API_KEY;
+    const apiUrl = process.env.LLM_API_URL ?? "https://router.huggingface.co/v1/chat/completions";
+    const model = process.env.LLM_MODEL ?? "meta-llama/Llama-3.1-8B-Instruct";
 
     let reply = `I found ${contextItems.length} context source${contextItems.length === 1 ? "" : "s"}. Ask me something about it.`;
 
