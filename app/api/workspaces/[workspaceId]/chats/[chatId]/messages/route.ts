@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { getAppContext } from "@/lib/app-context";
 import {
   addChatMessage,
   getChatByWorkspace,
@@ -52,7 +52,7 @@ export async function GET(
   context: { params: Promise<{ workspaceId: string; chatId: string }> },
 ) {
   try {
-    const session = await auth();
+    const session = await getAppContext();
 
     if (!session?.user?.id) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
@@ -114,7 +114,7 @@ export async function POST(
   let workspaceId: string | null = null;
 
   try {
-    const session = await auth();
+    const session = await getAppContext();
 
     if (!session?.user?.id) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });

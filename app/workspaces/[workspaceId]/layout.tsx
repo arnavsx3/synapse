@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { auth } from "@/auth";
+import { getAppContext } from "@/lib/app-context";
 import { RealtimeStatus } from "@/components/realtime-status";
 import { WorkspaceSwitcher } from "@/components/workspace-switcher";
 import {
@@ -15,11 +15,7 @@ export default async function WorkspaceTenantLayout({
   children: React.ReactNode;
   params: Promise<{ workspaceId: string }>;
 }) {
-  const session = await auth();
-
-  if (!session?.user?.id) {
-    redirect("/login");
-  }
+  const session = await getAppContext();
 
   const { workspaceId } = await params;
 

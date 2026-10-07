@@ -1,11 +1,11 @@
+import { eq } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { users } from "@/lib/db/schema";
 import { ensureDefaultWorkspaceForUser } from "@/lib/workspaces/defaults";
-import { eq } from "drizzle-orm";
 
 const LOCAL_USER_EMAIL = "local@synapse.test";
 
-export async function getLocalUser() {
+export async function getAppContext() {
   const [existingUser] = await db
     .select()
     .from(users)
@@ -18,10 +18,5 @@ export async function getLocalUser() {
     .returning())[0];
 
   await ensureDefaultWorkspaceForUser(user);
-  return user;
-}
-
-export async function auth() {
-  const user = await getLocalUser();
   return { user };
 }

@@ -6,7 +6,7 @@ Synapse is a full-stack knowledge workspace that combines notes, projects, seman
 
 Synapse is built around a workspace model where users can organize projects and notes, then use AI features on top of that data. The app now includes:
 
-- authentication and protected routes
+- local workspace context without authentication
 - workspace, project, note, and chat flows
 - semantic note retrieval with embeddings
 - AI chat grounded in user data
@@ -60,21 +60,16 @@ The repo now spans much more than the early setup phases. In practical terms, it
 
 The app uses a custom server in [server.ts](/D:/PROJECTS/synapse/server.ts:1) so the HTTP layer and Socket.IO server run together. Background embedding work is processed separately by [worker/note-embedding-worker.ts](/D:/PROJECTS/synapse/worker/note-embedding-worker.ts:1). Redis is used for BullMQ jobs and Redis-backed realtime messaging. PostgreSQL is currently provided by Neon, and note embeddings are stored with `pgvector`.
 
-## Authentication Note
+## Runtime Context
 
-This repo intentionally uses a mixed auth approach:
-
-- Google OAuth uses NextAuth
-- email/password auth uses custom API routes and manual database session creation
-
-This is an intentional learning tradeoff rather than an accidental inconsistency. The current setup keeps the important auth ideas visible without blocking progress on the rest of the stack.
+Authentication has been removed from the local application. The app bootstraps one local workspace context so the core notes, projects, chats, embeddings, and realtime flows can be developed without sign-in or protected routes.
 
 ## Main Runtime Pieces
 
 The app currently has three local runtime services:
 
 1. `app`
-   Serves the UI, API routes, auth flow, and Socket.IO connection.
+   Serves the UI, API routes, and Socket.IO connection.
 
 2. `worker`
    Processes note embedding jobs in the background.
@@ -101,10 +96,6 @@ Create a `.env` file in the project root and provide values for:
 ```env
 DATABASE_URL=
 REDIS_URL=
-NEXTAUTH_URL=http://localhost:3000
-NEXTAUTH_SECRET=
-GOOGLE_CLIENT_ID=
-GOOGLE_CLIENT_SECRET=
 GROQ_API_KEY=
 EMBEDDING_API_URL=
 EMBEDDING_API_KEY=
@@ -115,7 +106,6 @@ EMBEDDING_DIMENSIONS=384
 
 - In the current Docker setup, `DATABASE_URL` should still point to Neon.
 - Inside Docker Compose, Redis is addressed as `redis://redis:6379`.
-- `AUTH_TRUST_HOST=true` is used for the containerized app service so Auth.js trusts the local host header.
 
 ## Local Development
 
@@ -183,8 +173,7 @@ docker compose logs -f redis
 You should be able to confirm that:
 
 - the app opens at `http://localhost:3000`
-- login works
-- protected routes remain accessible
+  - the workspace directory opens without a login step
 - editing a note triggers an embedding job
 - the worker logs show `Embedding job completed: ...`
 - realtime socket connections join successfully

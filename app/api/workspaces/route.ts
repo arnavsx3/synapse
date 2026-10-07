@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { getAppContext } from "@/lib/app-context";
 import {
   createWorkspace,
   listWorkspacesByOwner,
@@ -9,7 +9,7 @@ import { emitWorkspaceChanged } from "@/lib/realtime/emitter";
 
 export async function GET() {
   try {
-    const session = await auth();
+    const session = await getAppContext();
 
     if (!session?.user?.id) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
@@ -29,7 +29,7 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await auth();
+    const session = await getAppContext();
 
     if (!session?.user?.id) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });

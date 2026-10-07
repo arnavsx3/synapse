@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { getAppContext } from "@/lib/app-context";
 import {
   createChat,
   deleteChatInWorkspace,
@@ -19,7 +19,7 @@ export async function GET(
   context: { params: Promise<{ workspaceId: string }> },
 ) {
   try {
-    const session = await auth();
+    const session = await getAppContext();
 
     if (!session?.user?.id) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
@@ -65,7 +65,7 @@ export async function POST(
   context: { params: Promise<{ workspaceId: string }> },
 ) {
   try {
-    const session = await auth();
+    const session = await getAppContext();
 
     if (!session?.user?.id) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
@@ -126,7 +126,7 @@ export async function PATCH(
   context: { params: Promise<{ workspaceId: string }> },
 ) {
   try {
-    const session = await auth();
+    const session = await getAppContext();
 
     if (!session?.user?.id) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
@@ -192,7 +192,7 @@ export async function DELETE(
   context: { params: Promise<{ workspaceId: string }> },
 ) {
   try {
-    const session = await auth();
+    const session = await getAppContext();
 
     if (!session?.user?.id) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
