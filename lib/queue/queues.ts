@@ -5,7 +5,6 @@ export const NOTE_EMBEDDING_QUEUE_NAME = "note-embedding";
 
 export type NoteEmbeddingJobData = {
   noteId: string;
-  userId: string;
 };
 
 export const noteEmbeddingQueue = new Queue<NoteEmbeddingJobData>(

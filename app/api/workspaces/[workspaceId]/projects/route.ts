@@ -102,7 +102,6 @@ export async function POST(
 
     const project = await createProject({
       ...result.data,
-      userId: session.user.id,
       workspaceId: workspaceAccess.workspace.id,
     });
 

@@ -98,7 +98,6 @@ export async function POST(
     }
 
     const chat = await createChat({
-      userId: session.user.id,
       workspaceId: workspaceAccess.workspace.id,
       title: result.data.title?.trim() || "New Chat",
     });

@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { buildNoteEmbeddingText } from "./notes";
 import { embedText } from "./embeddings";
 import { db } from "@/lib/db/client";
@@ -7,20 +7,18 @@ import { upsertNoteEmbedding } from "@/lib/db/queries/note-embeddings";
 
 export async function syncNoteEmbeddingByNoteId(
   noteId: string,
-  userId: string,
 ) {
   const [note] = await db
     .select({
       id: notes.id,
       title: notes.title,
       content: notes.content,
-      userId: notes.userId,
       workspaceId: notes.workspaceId,
       projectName: projects.name,
     })
     .from(notes)
     .leftJoin(projects, eq(notes.projectId, projects.id))
-    .where(and(eq(notes.id, noteId), eq(notes.userId, userId)));
+    .where(eq(notes.id, noteId));
 
   if (!note) {
     return null;
@@ -36,7 +34,6 @@ export async function syncNoteEmbeddingByNoteId(
 
   await upsertNoteEmbedding({
     noteId: note.id,
-    userId: note.userId,
     workspaceId: note.workspaceId,
     embedding,
     sourceText,

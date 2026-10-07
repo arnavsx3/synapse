@@ -3,7 +3,6 @@ import { api } from "./client";
 export type Workspace = {
   id: string;
   name: string;
-  ownerUserId: string;
   createdAt: string | null;
   updatedAt: string | null;
 };

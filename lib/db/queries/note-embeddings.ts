@@ -1,4 +1,4 @@
-import { and, eq, sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db } from "../client";
 import { noteEmbeddings, notes, projects } from "../schema";
 
@@ -8,7 +8,6 @@ const toVectorLiteral = (values: number[]) => {
 
 export const upsertNoteEmbedding = async (data: {
   noteId: string;
-  userId: string;
   workspaceId: string;
   embedding: number[];
   sourceText: string;
@@ -19,7 +18,6 @@ export const upsertNoteEmbedding = async (data: {
     .insert(noteEmbeddings)
     .values({
       noteId: data.noteId,
-      userId: data.userId,
       workspaceId: data.workspaceId,
       embedding: embeddingSql,
       sourceText: data.sourceText,
@@ -38,20 +36,17 @@ export const upsertNoteEmbedding = async (data: {
 
 export const deleteNoteEmbeddingByNoteId = async (
   noteId: string,
-  userId: string,
 ) => {
   const [deleted] = await db
     .delete(noteEmbeddings)
-    .where(
-      and(eq(noteEmbeddings.noteId, noteId), eq(noteEmbeddings.userId, userId)),
-    )
+    .where(eq(noteEmbeddings.noteId, noteId))
     .returning();
 
   return deleted;
 };
 
 export const getSemanticRelevantNotesByUser = async (
-  userId: string,
+  _scopeId: string,
   queryEmbedding: number[],
   limit = 5,
 ) => {
@@ -78,13 +73,12 @@ export const getSemanticRelevantNotesByUser = async (
     .from(noteEmbeddings)
     .innerJoin(notes, eq(noteEmbeddings.noteId, notes.id))
     .leftJoin(projects, eq(notes.projectId, projects.id))
-    .where(eq(noteEmbeddings.userId, userId))
     .orderBy(sql`${similarity} desc`)
     .limit(limit);
 };
 
 export const getSemanticRelevantNotesByWorkspace = async (
-  userId: string,
+  _scopeId: string,
   workspaceId: string,
   queryEmbedding: number[],
   limit = 5,
@@ -113,10 +107,7 @@ export const getSemanticRelevantNotesByWorkspace = async (
     .innerJoin(notes, eq(noteEmbeddings.noteId, notes.id))
     .leftJoin(projects, eq(notes.projectId, projects.id))
     .where(
-      and(
-        eq(noteEmbeddings.userId, userId),
-        eq(noteEmbeddings.workspaceId, workspaceId),
-      ),
+      eq(noteEmbeddings.workspaceId, workspaceId),
     )
     .orderBy(sql`${similarity} desc`)
     .limit(limit);

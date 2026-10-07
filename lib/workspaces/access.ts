@@ -1,9 +1,9 @@
-import { getWorkspaceByOwner } from "@/lib/db/queries/workspaces";
+import { getWorkspace } from "@/lib/db/queries/workspaces";
 import { workspaceParamsSchema } from "@/lib/validators/workspaces";
 
 export async function getAuthorizedWorkspace(
   paramsPromise: Promise<{ workspaceId: string }>,
-  userId: string,
+  _scopeId?: string,
 ) {
   const params = await paramsPromise;
   const parsed = workspaceParamsSchema.safeParse(params);
@@ -15,7 +15,7 @@ export async function getAuthorizedWorkspace(
     };
   }
 
-  const workspace = await getWorkspaceByOwner(parsed.data.workspaceId, userId);
+  const workspace = await getWorkspace(parsed.data.workspaceId);
 
   if (!workspace) {
     return {

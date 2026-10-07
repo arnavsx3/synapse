@@ -54,30 +54,56 @@ function emitToUser<EventPayload>(
 }
 
 export function emitWorkspaceChanged(
-  userId: string,
-  payload: WorkspaceChangedPayload,
+  userIdOrPayload: string | WorkspaceChangedPayload,
+  legacyPayload?: WorkspaceChangedPayload,
 ) {
-  emitToUser(userId, REALTIME_EVENTS.WORKSPACE_CHANGED, payload);
+  emitToUser(
+    "synapse",
+    REALTIME_EVENTS.WORKSPACE_CHANGED,
+    typeof userIdOrPayload === "string" ? legacyPayload! : userIdOrPayload,
+  );
 }
 
 export function emitProjectChanged(
-  userId: string,
-  payload: ProjectChangedPayload,
+  userIdOrPayload: string | ProjectChangedPayload,
+  legacyPayload?: ProjectChangedPayload,
 ) {
-  emitToUser(userId, REALTIME_EVENTS.PROJECT_CHANGED, payload);
+  emitToUser(
+    "synapse",
+    REALTIME_EVENTS.PROJECT_CHANGED,
+    typeof userIdOrPayload === "string" ? legacyPayload! : userIdOrPayload,
+  );
 }
 
-export function emitNoteChanged(userId: string, payload: NoteChangedPayload) {
-  emitToUser(userId, REALTIME_EVENTS.NOTE_CHANGED, payload);
+export function emitNoteChanged(
+  userIdOrPayload: string | NoteChangedPayload,
+  legacyPayload?: NoteChangedPayload,
+) {
+  emitToUser(
+    "synapse",
+    REALTIME_EVENTS.NOTE_CHANGED,
+    typeof userIdOrPayload === "string" ? legacyPayload! : userIdOrPayload,
+  );
 }
 
-export function emitChatChanged(userId: string, payload: ChatChangedPayload) {
-  emitToUser(userId, REALTIME_EVENTS.CHAT_CHANGED, payload);
+export function emitChatChanged(
+  userIdOrPayload: string | ChatChangedPayload,
+  legacyPayload?: ChatChangedPayload,
+) {
+  emitToUser(
+    "synapse",
+    REALTIME_EVENTS.CHAT_CHANGED,
+    typeof userIdOrPayload === "string" ? legacyPayload! : userIdOrPayload,
+  );
 }
 
 export function emitChatMessageCreated(
-  userId: string,
-  payload: ChatMessageCreatedPayload,
+  userIdOrPayload: string | ChatMessageCreatedPayload,
+  legacyPayload?: ChatMessageCreatedPayload,
 ) {
-  emitToUser(userId, REALTIME_EVENTS.CHAT_MESSAGE_CREATED, payload);
+  emitToUser(
+    "synapse",
+    REALTIME_EVENTS.CHAT_MESSAGE_CREATED,
+    typeof userIdOrPayload === "string" ? legacyPayload! : userIdOrPayload,
+  );
 }

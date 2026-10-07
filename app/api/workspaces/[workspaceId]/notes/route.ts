@@ -150,14 +150,12 @@ export async function POST(
 
     const note = await createNote({
       ...result.data,
-      userId: session.user.id,
       workspaceId: workspaceAccess.workspace.id,
     });
 
     try {
       await enqueueNoteEmbeddingJob({
         noteId: note.id,
-        userId: session.user.id,
       });
     } catch (queueError) {
       console.error("Create note embedding queue error:", queueError);
@@ -253,7 +251,6 @@ export async function PATCH(
     try {
       await enqueueNoteEmbeddingJob({
         noteId: updated.id,
-        userId: session.user.id,
       });
     } catch (queueError) {
       console.error("Update note embedding queue error:", queueError);

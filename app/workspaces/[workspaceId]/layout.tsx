@@ -1,11 +1,10 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getAppContext } from "@/lib/app-context";
 import { RealtimeStatus } from "@/components/realtime-status";
 import { WorkspaceSwitcher } from "@/components/workspace-switcher";
 import {
-  getWorkspaceByOwner,
-  listWorkspacesByOwner,
+  getWorkspace,
+  listWorkspaces,
 } from "@/lib/db/queries/workspaces";
 
 export default async function WorkspaceTenantLayout({
@@ -15,13 +14,11 @@ export default async function WorkspaceTenantLayout({
   children: React.ReactNode;
   params: Promise<{ workspaceId: string }>;
 }) {
-  const session = await getAppContext();
-
   const { workspaceId } = await params;
 
   const [currentWorkspace, workspaces] = await Promise.all([
-    getWorkspaceByOwner(workspaceId, session.user.id),
-    listWorkspacesByOwner(session.user.id),
+    getWorkspace(workspaceId),
+    listWorkspaces(),
   ]);
 
   if (!currentWorkspace) {

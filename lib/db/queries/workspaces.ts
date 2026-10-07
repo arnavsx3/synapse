@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, InferInsertModel, sql } from "drizzle-orm";
+import { asc, desc, eq, InferInsertModel, sql } from "drizzle-orm";
 import { db } from "../client";
 import { workspaces } from "../schema";
 
@@ -10,28 +10,26 @@ export const createWorkspace = async (data: CreateWorkspace) => {
   return workspace;
 };
 
-export const listWorkspacesByOwner = async (ownerUserId: string) => {
+export const listWorkspaces = async () => {
   return await db
     .select()
     .from(workspaces)
-    .where(eq(workspaces.ownerUserId, ownerUserId))
     .orderBy(desc(workspaces.updatedAt), asc(workspaces.name));
 };
 
-export const getWorkspaceByOwner = async (id: string, ownerUserId: string) => {
+export const getWorkspace = async (id: string) => {
   const [workspace] = await db
     .select()
     .from(workspaces)
-    .where(and(eq(workspaces.id, id), eq(workspaces.ownerUserId, ownerUserId)));
+    .where(eq(workspaces.id, id));
 
   return workspace;
 };
 
-export const getFirstWorkspaceByOwner = async (ownerUserId: string) => {
+export const getFirstWorkspace = async () => {
   const [workspace] = await db
     .select()
     .from(workspaces)
-    .where(eq(workspaces.ownerUserId, ownerUserId))
     .orderBy(asc(workspaces.createdAt))
     .limit(1);
 
@@ -41,36 +39,30 @@ export const getFirstWorkspaceByOwner = async (ownerUserId: string) => {
 export const updateWorkspace = async (
   id: string,
   data: UpdateWorkspace,
-  ownerUserId: string,
+  _scopeId?: string,
 ) => {
   const [workspace] = await db
     .update(workspaces)
-    .set({
-      ...data,
-      updatedAt: new Date(),
-    })
-    .where(and(eq(workspaces.id, id), eq(workspaces.ownerUserId, ownerUserId)))
+    .set({ ...data, updatedAt: new Date() })
+    .where(eq(workspaces.id, id))
     .returning();
 
   return workspace;
 };
 
-export const deleteWorkspace = async (id: string, ownerUserId: string) => {
+export const deleteWorkspace = async (id: string, _scopeId?: string) => {
   const [workspace] = await db
     .delete(workspaces)
-    .where(and(eq(workspaces.id, id), eq(workspaces.ownerUserId, ownerUserId)))
+    .where(eq(workspaces.id, id))
     .returning();
 
   return workspace;
 };
 
-export const countWorkspacesByOwner = async (ownerUserId: string) => {
+export const countWorkspaces = async () => {
   const [result] = await db
-    .select({
-      count: sql<number>`count(*)::int`,
-    })
-    .from(workspaces)
-    .where(eq(workspaces.ownerUserId, ownerUserId));
+    .select({ count: sql<number>`count(*)::int` })
+    .from(workspaces);
 
   return result?.count ?? 0;
 };

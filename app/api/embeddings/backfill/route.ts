@@ -19,7 +19,6 @@ export async function POST() {
       try {
         await enqueueNoteEmbeddingJob({
           noteId: note.id,
-          userId: session.user.id,
         });
         queuedCount += 1;
       } catch (error) {

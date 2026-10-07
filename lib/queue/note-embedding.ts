@@ -2,7 +2,6 @@ import { noteEmbeddingQueue } from "./queues";
 
 type EnqueueNoteEmbeddingJobInput = {
   noteId: string;
-  userId: string;
 };
 
 export async function enqueueNoteEmbeddingJob(

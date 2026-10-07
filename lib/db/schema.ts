@@ -7,28 +7,12 @@ import {
   index,
 } from "drizzle-orm/pg-core";
 
-export const users = pgTable("user", {
+export const workspaces = pgTable("workspace", {
   id: uuid("id").defaultRandom().primaryKey(),
-  email: text("email").notNull().unique(),
-  name: text("name"),
+  name: text("name").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
-
-export const workspaces = pgTable(
-  "workspace",
-  {
-    id: uuid("id").defaultRandom().primaryKey(),
-    name: text("name").notNull(),
-    ownerUserId: uuid("ownerUserId")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    createdAt: timestamp("created_at").defaultNow(),
-    updatedAt: timestamp("updated_at").defaultNow(),
-  },
-  (table) => ({
-    ownerUserIdIdx: index("workspace_owner_user_id_idx").on(table.ownerUserId),
-  }),
-);
 
 export const projects = pgTable(
   "project",
@@ -36,9 +20,6 @@ export const projects = pgTable(
     id: uuid("id").defaultRandom().primaryKey(),
     name: text("name").notNull(),
     description: text("description"),
-    userId: uuid("userId")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
     workspaceId: uuid("workspaceId")
       .notNull()
       .references(() => workspaces.id, { onDelete: "cascade" }),
@@ -56,9 +37,6 @@ export const notes = pgTable(
     id: uuid("id").defaultRandom().primaryKey(),
     title: text("title").notNull(),
     content: text("content"),
-    userId: uuid("userId")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
     workspaceId: uuid("workspaceId")
       .notNull()
       .references(() => workspaces.id, { onDelete: "cascade" }),
@@ -78,9 +56,6 @@ export const chats = pgTable(
   {
     id: uuid("id").defaultRandom().primaryKey(),
     title: text("title").notNull().default("New Chat"),
-    userId: uuid("userId")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
     workspaceId: uuid("workspaceId")
       .notNull()
       .references(() => workspaces.id, { onDelete: "cascade" }),
@@ -109,9 +84,6 @@ export const noteEmbeddings = pgTable(
       .notNull()
       .primaryKey()
       .references(() => notes.id, { onDelete: "cascade" }),
-    userId: uuid("userId")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
     workspaceId: uuid("workspaceId")
       .notNull()
       .references(() => workspaces.id, { onDelete: "cascade" }),
@@ -122,10 +94,6 @@ export const noteEmbeddings = pgTable(
   },
   (table) => ({
     workspaceIdIdx: index("note_embedding_workspace_id_idx").on(
-      table.workspaceId,
-    ),
-    userWorkspaceIdx: index("note_embedding_user_workspace_idx").on(
-      table.userId,
       table.workspaceId,
     ),
   }),

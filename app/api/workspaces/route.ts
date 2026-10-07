@@ -1,21 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAppContext } from "@/lib/app-context";
 import {
   createWorkspace,
-  listWorkspacesByOwner,
+  listWorkspaces,
 } from "@/lib/db/queries/workspaces";
 import { createWorkspaceSchema } from "@/lib/validators/workspaces";
 import { emitWorkspaceChanged } from "@/lib/realtime/emitter";
 
 export async function GET() {
   try {
-    const session = await getAppContext();
-
-    if (!session?.user?.id) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-    }
-
-    const workspaces = await listWorkspacesByOwner(session.user.id);
+    const workspaces = await listWorkspaces();
     return NextResponse.json({ workspaces });
   } catch (error) {
     console.error("Get workspaces error:", error);
@@ -29,12 +22,6 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getAppContext();
-
-    if (!session?.user?.id) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-    }
-
     const body = await req.json();
     const result = createWorkspaceSchema.safeParse(body);
 
@@ -47,10 +34,9 @@ export async function POST(req: NextRequest) {
 
     const workspace = await createWorkspace({
       name: result.data.name,
-      ownerUserId: session.user.id,
     });
 
-    emitWorkspaceChanged(session.user.id, {
+    emitWorkspaceChanged({
       action: "created",
       workspaceId: workspace.id,
       occurredAt: new Date().toISOString(),

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAppContext } from "@/lib/app-context";
 import {
-  countWorkspacesByOwner,
+  countWorkspaces,
   deleteWorkspace,
   updateWorkspace,
 } from "@/lib/db/queries/workspaces";
@@ -14,16 +13,7 @@ export async function GET(
   context: { params: Promise<{ workspaceId: string }> },
 ) {
   try {
-    const session = await getAppContext();
-
-    if (!session?.user?.id) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-    }
-
-    const result = await getAuthorizedWorkspace(
-      context.params,
-      session.user.id,
-    );
+    const result = await getAuthorizedWorkspace(context.params);
 
     if (result.error === "invalid") {
       return NextResponse.json(
@@ -55,16 +45,7 @@ export async function PATCH(
   context: { params: Promise<{ workspaceId: string }> },
 ) {
   try {
-    const session = await getAppContext();
-
-    if (!session?.user?.id) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-    }
-
-    const workspaceAccess = await getAuthorizedWorkspace(
-      context.params,
-      session.user.id,
-    );
+    const workspaceAccess = await getAuthorizedWorkspace(context.params);
 
     if (workspaceAccess.error === "invalid") {
       return NextResponse.json(
@@ -93,7 +74,6 @@ export async function PATCH(
     const workspace = await updateWorkspace(
       workspaceAccess.workspace.id,
       { name: bodyResult.data.name },
-      session.user.id,
     );
 
     if (!workspace) {
@@ -103,7 +83,7 @@ export async function PATCH(
       );
     }
 
-    emitWorkspaceChanged(session.user.id, {
+    emitWorkspaceChanged({
       action: "updated",
       workspaceId: workspace.id,
       occurredAt: new Date().toISOString(),
@@ -125,16 +105,7 @@ export async function DELETE(
   context: { params: Promise<{ workspaceId: string }> },
 ) {
   try {
-    const session = await getAppContext();
-
-    if (!session?.user?.id) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-    }
-
-    const workspaceAccess = await getAuthorizedWorkspace(
-      context.params,
-      session.user.id,
-    );
+    const workspaceAccess = await getAuthorizedWorkspace(context.params);
 
     if (workspaceAccess.error === "invalid") {
       return NextResponse.json(
@@ -150,7 +121,7 @@ export async function DELETE(
       );
     }
 
-    const totalWorkspaces = await countWorkspacesByOwner(session.user.id);
+    const totalWorkspaces = await countWorkspaces();
 
     if (totalWorkspaces <= 1) {
       return NextResponse.json(
@@ -161,7 +132,6 @@ export async function DELETE(
 
     const workspace = await deleteWorkspace(
       workspaceAccess.workspace.id,
-      session.user.id,
     );
 
     if (!workspace) {
@@ -171,7 +141,7 @@ export async function DELETE(
       );
     }
 
-    emitWorkspaceChanged(session.user.id, {
+    emitWorkspaceChanged({
       action: "deleted",
       workspaceId: workspace.id,
       occurredAt: new Date().toISOString(),

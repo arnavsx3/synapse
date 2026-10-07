@@ -11,8 +11,8 @@ console.log("Worker started...");
 export const noteEmbeddingWorker = new Worker<NoteEmbeddingJobData>(
   NOTE_EMBEDDING_QUEUE_NAME,
   async (job) => {
-    const { noteId, userId } = job.data;
-    await syncNoteEmbeddingByNoteId(noteId, userId);
+    const { noteId } = job.data;
+    await syncNoteEmbeddingByNoteId(noteId);
   },
   {
     connection: createWorkerConnection(),

@@ -10,83 +10,40 @@ export const createChat = async (data: CreateChat) => {
   return chat;
 };
 
-export const getChatsByUser = async (userId: string) => {
-  return await db
-    .select()
-    .from(chats)
-    .where(eq(chats.userId, userId))
-    .orderBy(desc(chats.updatedAt), desc(chats.createdAt));
-};
+export const getChatsByUser = async (_scopeId: string) =>
+  db.select().from(chats).orderBy(desc(chats.updatedAt), desc(chats.createdAt));
 
-export const getChatsByWorkspace = async (
-  userId: string,
-  workspaceId: string,
-) => {
-  return await db
-    .select()
-    .from(chats)
-    .where(and(eq(chats.userId, userId), eq(chats.workspaceId, workspaceId)))
-    .orderBy(desc(chats.updatedAt), desc(chats.createdAt));
-};
+export const getChatsByWorkspace = async (_scopeId: string, workspaceId: string) =>
+  db.select().from(chats).where(eq(chats.workspaceId, workspaceId)).orderBy(desc(chats.updatedAt), desc(chats.createdAt));
 
-export const getChatByUser = async (id: string, userId: string) => {
-  const [chat] = await db
-    .select()
-    .from(chats)
-    .where(and(eq(chats.id, id), eq(chats.userId, userId)));
-
+export const getChatByUser = async (id: string, _scopeId: string) => {
+  const [chat] = await db.select().from(chats).where(eq(chats.id, id));
   return chat;
 };
 
 export const getChatByWorkspace = async (
   id: string,
-  userId: string,
+  _scopeId: string,
   workspaceId: string,
 ) => {
-  const [chat] = await db
-    .select()
-    .from(chats)
-    .where(
-      and(
-        eq(chats.id, id),
-        eq(chats.userId, userId),
-        eq(chats.workspaceId, workspaceId),
-      ),
-    );
-
+  const [chat] = await db.select().from(chats).where(and(eq(chats.id, id), eq(chats.workspaceId, workspaceId)));
   return chat;
 };
 
-export const getChatMessagesByUser = async (chatId: string, userId: string) => {
-  const chat = await getChatByUser(chatId, userId);
-
-  if (!chat) {
-    return null;
-  }
-
-  return await db
-    .select()
-    .from(chatMessages)
-    .where(eq(chatMessages.chatId, chatId))
-    .orderBy(asc(chatMessages.createdAt));
+export const getChatMessagesByUser = async (chatId: string, scopeId: string) => {
+  const chat = await getChatByUser(chatId, scopeId);
+  if (!chat) return null;
+  return db.select().from(chatMessages).where(eq(chatMessages.chatId, chatId)).orderBy(asc(chatMessages.createdAt));
 };
 
 export const getChatMessagesByWorkspace = async (
   chatId: string,
-  userId: string,
+  scopeId: string,
   workspaceId: string,
 ) => {
-  const chat = await getChatByWorkspace(chatId, userId, workspaceId);
-
-  if (!chat) {
-    return null;
-  }
-
-  return await db
-    .select()
-    .from(chatMessages)
-    .where(eq(chatMessages.chatId, chatId))
-    .orderBy(asc(chatMessages.createdAt));
+  const chat = await getChatByWorkspace(chatId, scopeId, workspaceId);
+  if (!chat) return null;
+  return db.select().from(chatMessages).where(eq(chatMessages.chatId, chatId)).orderBy(asc(chatMessages.createdAt));
 };
 
 export const addChatMessage = async (data: CreateChatMessage) => {
@@ -94,105 +51,37 @@ export const addChatMessage = async (data: CreateChatMessage) => {
   return message;
 };
 
-export const updateChatTitle = async (
-  id: string,
-  title: string,
-  userId: string,
-) => {
-  const [chat] = await db
-    .update(chats)
-    .set({
-      title,
-      updatedAt: new Date(),
-    })
-    .where(and(eq(chats.id, id), eq(chats.userId, userId)))
-    .returning();
-
+export const updateChatTitle = async (id: string, title: string, _scopeId: string) => {
+  const [chat] = await db.update(chats).set({ title, updatedAt: new Date() }).where(eq(chats.id, id)).returning();
   return chat;
 };
 
 export const updateChatTitleInWorkspace = async (
   id: string,
   title: string,
-  userId: string,
+  _scopeId: string,
   workspaceId: string,
 ) => {
-  const [chat] = await db
-    .update(chats)
-    .set({
-      title,
-      updatedAt: new Date(),
-    })
-    .where(
-      and(
-        eq(chats.id, id),
-        eq(chats.userId, userId),
-        eq(chats.workspaceId, workspaceId),
-      ),
-    )
-    .returning();
-
+  const [chat] = await db.update(chats).set({ title, updatedAt: new Date() }).where(and(eq(chats.id, id), eq(chats.workspaceId, workspaceId))).returning();
   return chat;
 };
 
-export const touchChat = async (id: string, userId: string) => {
-  const [chat] = await db
-    .update(chats)
-    .set({
-      updatedAt: new Date(),
-    })
-    .where(and(eq(chats.id, id), eq(chats.userId, userId)))
-    .returning();
-
+export const touchChat = async (id: string, _scopeId: string) => {
+  const [chat] = await db.update(chats).set({ updatedAt: new Date() }).where(eq(chats.id, id)).returning();
   return chat;
 };
 
-export const touchChatInWorkspace = async (
-  id: string,
-  userId: string,
-  workspaceId: string,
-) => {
-  const [chat] = await db
-    .update(chats)
-    .set({
-      updatedAt: new Date(),
-    })
-    .where(
-      and(
-        eq(chats.id, id),
-        eq(chats.userId, userId),
-        eq(chats.workspaceId, workspaceId),
-      ),
-    )
-    .returning();
-
+export const touchChatInWorkspace = async (id: string, _scopeId: string, workspaceId: string) => {
+  const [chat] = await db.update(chats).set({ updatedAt: new Date() }).where(and(eq(chats.id, id), eq(chats.workspaceId, workspaceId))).returning();
   return chat;
 };
 
-export const deleteChat = async (id: string, userId: string) => {
-  const [chat] = await db
-    .delete(chats)
-    .where(and(eq(chats.id, id), eq(chats.userId, userId)))
-    .returning();
-
+export const deleteChat = async (id: string, _scopeId: string) => {
+  const [chat] = await db.delete(chats).where(eq(chats.id, id)).returning();
   return chat;
 };
 
-export const deleteChatInWorkspace = async (
-  id: string,
-  userId: string,
-  workspaceId: string,
-) => {
-  const [chat] = await db
-    .delete(chats)
-    .where(
-      and(
-        eq(chats.id, id),
-        eq(chats.userId, userId),
-        eq(chats.workspaceId, workspaceId),
-      ),
-    )
-    .returning();
-
+export const deleteChatInWorkspace = async (id: string, _scopeId: string, workspaceId: string) => {
+  const [chat] = await db.delete(chats).where(and(eq(chats.id, id), eq(chats.workspaceId, workspaceId))).returning();
   return chat;
 };
