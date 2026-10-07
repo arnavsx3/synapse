@@ -1,7 +1,7 @@
 FROM node:20-alpine AS dependencies
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm ci
+RUN --mount=type=cache,target=/root/.npm npm ci --no-audit --no-fund
 
 FROM node:20-alpine AS builder
 WORKDIR /app
