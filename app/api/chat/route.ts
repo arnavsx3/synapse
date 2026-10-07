@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import axios from "axios";
 import { createChatMessage, listChatMessages } from "@/lib/db/queries/chat";
 import { retrieveContext } from "@/lib/context/retrieval";
 
@@ -39,9 +38,13 @@ export async function POST(request: NextRequest) {
     let reply = `I found ${contextItems.length} context source${contextItems.length === 1 ? "" : "s"}. Ask me something about it.`;
 
     if (apiKey) {
-      const response = await axios.post(
-        apiUrl,
-        {
+      const response = await fetch(apiUrl, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
           model,
           temperature: 0.4,
           messages: [
@@ -52,10 +55,21 @@ export async function POST(request: NextRequest) {
             { role: "system", content: `CONTEXT:\n${context}` },
             ...history.slice(-12).map((item) => ({ role: item.role, content: item.content })),
           ],
-        },
-        { headers: { Authorization: `Bearer ${apiKey}` } },
-      );
-      reply = response.data?.choices?.[0]?.message?.content?.trim() || reply;
+        }),
+        signal: AbortSignal.timeout(60_000),
+      });
+
+      if (!response.ok) {
+        throw new Error(`LLM provider returned ${response.status}`);
+      }
+
+      const responseData = (await response.json()) as {
+        choices?: Array<{ message?: { content?: unknown } }>;
+      };
+      const providerReply = responseData.choices?.[0]?.message?.content;
+      if (typeof providerReply === "string") {
+        reply = providerReply.trim() || reply;
+      }
     }
 
     const assistantMessage = await createChatMessage({ role: "assistant", content: reply });

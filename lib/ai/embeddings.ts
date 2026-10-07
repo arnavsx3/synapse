@@ -1,6 +1,3 @@
-import axios from "axios";
-import { AxiosError } from "axios";
-
 const EMBEDDING_DIMENSIONS = Number(process.env.EMBEDDING_DIMENSIONS ?? 384);
 const EMBEDDING_MODEL =
   process.env.EMBEDDING_MODEL ?? "sentence-transformers/all-MiniLM-L6-v2";
@@ -56,22 +53,42 @@ export async function embedText(text: string) {
     throw new Error("Cannot embed empty text.");
   }
 
+  const apiKey = process.env.EMBEDDING_API_KEY;
+  if (!apiKey) {
+    throw new Error("Missing EMBEDDING_API_KEY.");
+  }
+
   try {
-    const response = await axios.post(
-      getEmbeddingApiUrl(),
-      {
+    const response = await fetch(getEmbeddingApiUrl(), {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
         inputs: input,
         normalize: true,
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${process.env.EMBEDDING_API_KEY!}`,
-          "Content-Type": "application/json",
-        },
-      },
-    );
+      }),
+      signal: AbortSignal.timeout(30_000),
+    });
 
-    const embedding = parseEmbedding(response.data);
+    const responseText = await response.text();
+    let responseData: unknown = null;
+    try {
+      responseData = JSON.parse(responseText);
+    } catch {
+      responseData = responseText;
+    }
+
+    if (!response.ok) {
+      const detail =
+        typeof responseData === "string"
+          ? responseData
+          : JSON.stringify(responseData);
+      throw new Error(`Embedding provider returned ${response.status}: ${detail}`);
+    }
+
+    const embedding = parseEmbedding(responseData);
 
     if (!Array.isArray(embedding)) {
       throw new Error("Embedding response did not contain a valid vector.");
@@ -84,23 +101,8 @@ export async function embedText(text: string) {
     }
 
     return embedding as number[];
-  } catch (err: unknown) {
-    let errorText = "Unknown error";
-
-    if (axios.isAxiosError(err)) {
-      const axiosErr = err as AxiosError;
-
-      if (typeof axiosErr.response?.data === "string") {
-        errorText = axiosErr.response.data;
-      } else if (axiosErr.response?.data) {
-        errorText = JSON.stringify(axiosErr.response.data);
-      } else if (axiosErr.message) {
-        errorText = axiosErr.message;
-      }
-    } else if (err instanceof Error) {
-      errorText = err.message;
-    }
-
+  } catch (error) {
+    const errorText = error instanceof Error ? error.message : "Unknown error";
     throw new Error(`Embedding request failed: ${errorText}`);
   }
 }
