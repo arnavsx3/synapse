@@ -2,19 +2,9 @@ import type { Server as HttpServer } from "node:http";
 import Redis from "ioredis";
 import { Server } from "socket.io";
 import { createAdapter } from "@socket.io/redis-adapter";
-import {
-  getUserFromCookieHeader,
-  type AuthenticatedUser,
-} from "../auth/session";
-import {
-  getUserRoom,
-  type ClientToServerEvents,
-  type ServerToClientEvents,
-} from "./events";
+import type { ClientToServerEvents, ServerToClientEvents } from "./events";
 
-type SocketData = {
-  user: AuthenticatedUser;
-};
+type SocketData = Record<string, never>;
 
 function getRedisUrl() {
   const url = process.env.REDIS_URL;
@@ -43,27 +33,9 @@ export function registerSocketServer(httpServer: HttpServer) {
 
   io.adapter(createAdapter(pubClient, subClient));
 
-  io.use(async (socket, next) => {
-    try {
-      const user = await getUserFromCookieHeader(socket.request.headers.cookie);
-
-      if (!user) {
-        next(new Error("Unauthorized"));
-        return;
-      }
-
-      socket.data.user = user;
-      next();
-    } catch (error) {
-      console.error("Socket auth error:", error);
-      next(new Error("Unauthorized"));
-    }
-  });
-
   io.on("connection", (socket) => {
-     const room = getUserRoom(socket.data.user.id);
-     socket.join(room);
-     console.log("Joined room:", room);
+    socket.join("synapse");
+    console.log("Joined room: synapse");
   });
 
   return io;

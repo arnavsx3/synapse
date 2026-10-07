@@ -46,12 +46,12 @@ export default function Home() {
 
             <div className="flex items-center gap-3">
               <Link
-                href="/login"
+                href="/workspaces"
                 className="rounded-lg border border-white/10 px-4 py-2 text-sm text-[#94A3B8] transition hover:bg-white/10 hover:text-white">
-                Sign in
+                Browse workspaces
               </Link>
               <Link
-                href="/signup"
+                href="/workspaces"
                 className="rounded-lg bg-(--primary) px-4 py-2 text-sm font-medium text-white transition hover:bg-indigo-500">
                 Get started
               </Link>
@@ -79,7 +79,7 @@ export default function Home() {
 
               <div className="mt-8 flex flex-wrap gap-3">
                 <Link
-                  href="/signup"
+                  href="/workspaces"
                   className="rounded-xl bg-(--primary) px-5 py-3 text-sm font-medium text-white transition hover:bg-indigo-500">
                   Create workspace
                 </Link>
