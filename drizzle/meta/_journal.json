@@ -8,6 +8,13 @@
       "when": 1770000000000,
       "tag": "0001_chunked_rag",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1770500000000,
+      "tag": "0002_openrouter_embeddings",
+      "breakpoints": true
     }
   ]
 }

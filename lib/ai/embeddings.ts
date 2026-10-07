@@ -1,11 +1,13 @@
-export const EMBEDDING_DIMENSIONS = Number(process.env.EMBEDDING_DIMENSIONS ?? 384);
+import { getProviderErrorCode, ProviderError } from "./provider-error";
+
+export const EMBEDDING_DIMENSIONS = Number(process.env.EMBEDDING_DIMENSIONS ?? 2048);
 export const EMBEDDING_MODEL =
-  process.env.EMBEDDING_MODEL ?? "sentence-transformers/all-MiniLM-L6-v2";
+  process.env.EMBEDDING_MODEL ?? "nvidia/nemotron-3-embed-1b:free";
 
 function getEmbeddingApiUrl() {
   return (
     process.env.EMBEDDING_API_URL ??
-    `https://router.huggingface.co/hf-inference/models/${EMBEDDING_MODEL}/pipeline/feature-extraction`
+    `${process.env.OPENROUTER_BASE_URL ?? "https://openrouter.ai/api/v1"}/embeddings`
   );
 }
 
@@ -14,15 +16,33 @@ function normalizeEmbeddingInput(text: string) {
 }
 
 function parseEmbedding(data: unknown) {
-  if (!Array.isArray(data) || data.length === 0) {
+  const payload =
+    typeof data === "object" && data !== null && "data" in data
+      ? (data as { data?: unknown }).data
+      : data;
+
+  if (!Array.isArray(payload) || payload.length === 0) {
     return null;
   }
 
-  if (data.every((value) => typeof value === "number")) {
-    return data as number[];
+  const first = payload[0];
+  if (
+    typeof first === "object" &&
+    first !== null &&
+    "embedding" in first
+  ) {
+    const embedding = (first as { embedding?: unknown }).embedding;
+    return Array.isArray(embedding) &&
+      embedding.every((value) => typeof value === "number")
+      ? (embedding as number[])
+      : null;
   }
 
-  const vectors = data.filter(
+  if (payload.every((value) => typeof value === "number")) {
+    return payload as number[];
+  }
+
+  const vectors = payload.filter(
     (value): value is number[] =>
       Array.isArray(value) &&
       value.length > 0 &&
@@ -53,7 +73,7 @@ export async function embedText(text: string) {
     throw new Error("Cannot embed empty text.");
   }
 
-  const apiKey = process.env.EMBEDDING_API_KEY;
+  const apiKey = process.env.EMBEDDING_API_KEY || process.env.OPENROUTER_API_KEY;
   if (!apiKey) {
     throw new ProviderError("Missing EMBEDDING_API_KEY.", "configuration");
   }
@@ -66,8 +86,9 @@ export async function embedText(text: string) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        inputs: input,
-        normalize: true,
+        input,
+        model: EMBEDDING_MODEL,
+        encoding_format: "float",
       }),
       signal: AbortSignal.timeout(30_000),
     });
@@ -118,7 +139,3 @@ export async function embedText(text: string) {
     );
   }
 }
-import {
-  getProviderErrorCode,
-  ProviderError,
-} from "./provider-error";

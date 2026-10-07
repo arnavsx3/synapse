@@ -21,13 +21,15 @@ services:
       NODE_ENV: production
       DATABASE_URL: ${DATABASE_URL}
       REDIS_URL: redis://redis:6379
-      LLM_API_URL: ${LLM_API_URL:-https://router.huggingface.co/v1/chat/completions}
-      LLM_API_KEY: ${LLM_API_KEY}
-      LLM_MODEL: ${LLM_MODEL:-TinyLlama/TinyLlama-1.1B-Chat-v1.0}
-      EMBEDDING_API_URL: ${EMBEDDING_API_URL:-https://router.huggingface.co/hf-inference/models/sentence-transformers/all-MiniLM-L6-v2/pipeline/feature-extraction}
-      EMBEDDING_API_KEY: ${EMBEDDING_API_KEY}
-      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-sentence-transformers/all-MiniLM-L6-v2}
-      EMBEDDING_DIMENSIONS: ${EMBEDDING_DIMENSIONS:-384}
+      OPENROUTER_BASE_URL: ${OPENROUTER_BASE_URL:-https://openrouter.ai/api/v1}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
+      LLM_API_URL: ${LLM_API_URL:-https://openrouter.ai/api/v1/chat/completions}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_MODEL: ${LLM_MODEL:-openrouter/free}
+      EMBEDDING_API_URL: ${EMBEDDING_API_URL:-https://openrouter.ai/api/v1/embeddings}
+      EMBEDDING_API_KEY: ${EMBEDDING_API_KEY:-}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-nvidia/nemotron-3-embed-1b:free}
+      EMBEDDING_DIMENSIONS: ${EMBEDDING_DIMENSIONS:-2048}
       RAG_CHUNK_SIZE: ${RAG_CHUNK_SIZE:-1200}
       RAG_CHUNK_OVERLAP: ${RAG_CHUNK_OVERLAP:-200}
       RAG_RETRIEVAL_LIMIT: ${RAG_RETRIEVAL_LIMIT:-8}
@@ -50,10 +52,12 @@ services:
       DATABASE_URL: ${DATABASE_URL}
       REDIS_URL: redis://redis:6379
       EMBEDDING_WORKER_CONCURRENCY: ${EMBEDDING_WORKER_CONCURRENCY:-2}
-      EMBEDDING_API_URL: ${EMBEDDING_API_URL:-https://router.huggingface.co/hf-inference/models/sentence-transformers/all-MiniLM-L6-v2/pipeline/feature-extraction}
-      EMBEDDING_API_KEY: ${EMBEDDING_API_KEY}
-      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-sentence-transformers/all-MiniLM-L6-v2}
-      EMBEDDING_DIMENSIONS: ${EMBEDDING_DIMENSIONS:-384}
+      OPENROUTER_BASE_URL: ${OPENROUTER_BASE_URL:-https://openrouter.ai/api/v1}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
+      EMBEDDING_API_URL: ${EMBEDDING_API_URL:-https://openrouter.ai/api/v1/embeddings}
+      EMBEDDING_API_KEY: ${EMBEDDING_API_KEY:-}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-nvidia/nemotron-3-embed-1b:free}
+      EMBEDDING_DIMENSIONS: ${EMBEDDING_DIMENSIONS:-2048}
       RAG_CHUNK_SIZE: ${RAG_CHUNK_SIZE:-1200}
       RAG_CHUNK_OVERLAP: ${RAG_CHUNK_OVERLAP:-200}
       RAG_RETRIEVAL_LIMIT: ${RAG_RETRIEVAL_LIMIT:-8}

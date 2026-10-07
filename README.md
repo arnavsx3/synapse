@@ -16,7 +16,7 @@ There are no accounts, workspaces, projects, workflows, or custom server layer.
 ```text
 Browser → Nginx → Next.js App Router → Postgres
                               ├──────→ Redis → embedding worker
-                              └──────→ hosted Llama-compatible API
+                              └──────→ OpenRouter-compatible AI APIs
 ```
 
 - Next.js App Router serves the UI and route handlers.
@@ -27,25 +27,25 @@ Browser → Nginx → Next.js App Router → Postgres
 - The RAG pipeline chunks each document with overlap, stores character offsets and source metadata, and embeds each chunk independently.
 - Retrieval returns diverse chunk-level matches with source references. If embeddings are pending, unavailable, rate-limited, or over quota, it switches to weighted keyword search and reports the degraded mode.
 - Context items expose `pending`, `processing`, `completed`, and `failed` embedding status so indexing failures are visible instead of silently disappearing.
-- Chat uses the open-weight `TinyLlama/TinyLlama-1.1B-Chat-v1.0` model through Hugging Face's OpenAI-compatible endpoint; the model and endpoint are configurable.
+- Chat uses OpenRouter's OpenAI-compatible API. The default `openrouter/free` route selects an available free chat model; the model and endpoint are configurable.
 
 ## Local setup
 
 1. Copy `.env.example` to `.env`.
 2. Add the fresh development `DATABASE_URL`.
-3. Add an `LLM_API_KEY` with Hugging Face Inference Providers permission.
-4. Add the same token as `EMBEDDING_API_KEY`; the default embedding model is the Apache-2.0 `sentence-transformers/all-MiniLM-L6-v2` with 384 dimensions.
+3. Create an OpenRouter API key and set `OPENROUTER_API_KEY` (or the separate `LLM_API_KEY` and `EMBEDDING_API_KEY` variables).
+4. The default embedding route is NVIDIA's free `nvidia/nemotron-3-embed-1b:free` model with 2,048 dimensions. OpenRouter free routes are rate-limited and their availability can change.
 5. Tune `EMBEDDING_WORKER_CONCURRENCY` if the embedding provider allows more or fewer concurrent requests.
 
-Apply the chunked-RAG migration before starting the app against an existing database:
+Apply the migrations before starting the app against an existing database:
 
 ```bash
 npm run db:migrate
 ```
 
-The migration preserves existing single-document embeddings as legacy chunks. New uploads are split into overlapping chunks by the worker.
+The latest migration changes the vector dimension for the OpenRouter embedding model and marks stored context as pending. Existing vectors are intentionally discarded because vectors from different embedding models cannot be mixed; pending contexts are re-indexed when their embedding jobs are queued again.
 
-The models are free/open-weight to use under their respective licenses, but hosted inference requests can still consume Hugging Face/provider quota.
+OpenRouter's free routes are rate-limited and model availability can change. Do not send confidential or personal data to free provider endpoints.
 
 Install and run the app directly:
 
@@ -80,7 +80,7 @@ Open [http://localhost:3000](http://localhost:3000). Nginx is the only exposed a
 
 ### Hosted inference fallback
 
-The default Hugging Face models are open-weight, but hosted inference still depends on provider quota. A `402` response marks semantic retrieval as quota-limited and activates keyword retrieval; a `429` response reports rate limiting and does the same. If the chat provider is unavailable, Synapse stores a local response with the retrieval sources and a warning instead of failing the request entirely.
+Hosted inference still depends on provider availability and rate limits. A `402` or quota response marks semantic retrieval as quota-limited and activates keyword retrieval; a `429` response reports rate limiting and does the same. If the chat provider is unavailable, Synapse stores a local response with the retrieval sources and a warning instead of failing the request entirely.
 
 ## Useful scripts
 

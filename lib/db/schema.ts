@@ -61,7 +61,7 @@ export const contextEmbeddings = pgTable(
     chunkId: uuid("chunk_id")
       .primaryKey()
       .references(() => contextChunks.id, { onDelete: "cascade" }),
-    embedding: vector("embedding", { dimensions: 384 }),
+    embedding: vector("embedding", { dimensions: 2048 }),
     model: text("model").notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
