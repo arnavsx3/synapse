@@ -1,47 +1,27 @@
-import NextAuth from "next-auth";
-import Google from "next-auth/providers/google";
-import { DrizzleAdapter } from "@auth/drizzle-adapter";
 import { db } from "@/lib/db/client";
+import { users } from "@/lib/db/schema";
 import { ensureDefaultWorkspaceForUser } from "@/lib/workspaces/defaults";
+import { eq } from "drizzle-orm";
 
-export const { handlers, auth } = NextAuth({
-  adapter: DrizzleAdapter(db),
+const LOCAL_USER_EMAIL = "local@synapse.test";
 
-  providers: [
-    Google({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-    }),
-  ],
+export async function getLocalUser() {
+  const [existingUser] = await db
+    .select()
+    .from(users)
+    .where(eq(users.email, LOCAL_USER_EMAIL))
+    .limit(1);
 
-  pages: {
-    signIn: "/login",
-  },
+  const user = existingUser ?? (await db
+    .insert(users)
+    .values({ email: LOCAL_USER_EMAIL, name: "Local User" })
+    .returning())[0];
 
-  session: {
-    strategy: "database",
-    maxAge: 30 * 24 * 60 * 60,
-  },
+  await ensureDefaultWorkspaceForUser(user);
+  return user;
+}
 
-  callbacks: {
-    async signIn({ user }) {
-      if (user.id) {
-        await ensureDefaultWorkspaceForUser({
-          id: user.id,
-          name: user.name,
-          email: user.email,
-        });
-      }
-
-      return true;
-    },
-
-    async session({ session, user }) {
-      if (session.user) {
-        session.user.id = user.id;
-      }
-
-      return session;
-    },
-  },
-});
+export async function auth() {
+  const user = await getLocalUser();
+  return { user };
+}

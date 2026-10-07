@@ -1,11 +1,7 @@
-import { auth } from "@/auth";
 import { RealtimeStatus } from "@/components/realtime-status";
-import { LogoutButton } from "@/app/dashboard/logout-button";
 import { WorkspaceDirectory } from "./workspace-directory";
 
 export default async function WorkspacesPage() {
-  const session = await auth();
-
   return (
     <div className="min-h-screen bg-linear-to-br from-(--bg-start) via-(--bg-mid) to-(--bg-end) text-(--text-main)">
       <header className="border-b border-white/10 bg-black/20 backdrop-blur-xl">
@@ -19,10 +15,6 @@ export default async function WorkspacesPage() {
 
           <div className="flex items-center gap-4">
             <RealtimeStatus />
-            <p className="hidden text-sm text-[#94A3B8] sm:block">
-              {session?.user?.email ?? ""}
-            </p>
-            <LogoutButton />
           </div>
         </div>
       </header>

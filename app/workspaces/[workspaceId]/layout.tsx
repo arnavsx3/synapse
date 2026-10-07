@@ -3,7 +3,6 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { RealtimeStatus } from "@/components/realtime-status";
 import { WorkspaceSwitcher } from "@/components/workspace-switcher";
-import { LogoutButton } from "@/app/dashboard/logout-button";
 import {
   getWorkspaceByOwner,
   listWorkspacesByOwner,
@@ -75,11 +74,6 @@ export default async function WorkspaceTenantLayout({
 
             <RealtimeStatus />
 
-            <p className="hidden text-sm text-[#94A3B8] sm:block">
-              {session.user.email ?? ""}
-            </p>
-
-            <LogoutButton />
           </div>
         </div>
       </header>
@@ -88,4 +82,3 @@ export default async function WorkspaceTenantLayout({
     </div>
   );
 }
-

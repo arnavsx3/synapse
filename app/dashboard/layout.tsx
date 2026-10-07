@@ -1,15 +1,11 @@
-import { auth } from "@/auth";
 import { RealtimeStatus } from "@/components/realtime-status";
 import { RealtimeProvider } from "@/providers/realtime-provider";
-import { LogoutButton } from "./logout-button";
 
 export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const session = await auth();
-
   return (
     <RealtimeProvider>
       <div className="min-h-screen bg-linear-to-br from-(--bg-start) via-(--bg-mid) to-(--bg-end) text-(--text-main)">
@@ -24,10 +20,6 @@ export default async function DashboardLayout({
 
             <div className="flex items-center gap-4">
               <RealtimeStatus />
-              <p className="hidden text-sm text-[#94A3B8] sm:block">
-                {session?.user?.email ?? ""}
-              </p>
-              <LogoutButton />
             </div>
           </div>
         </header>
