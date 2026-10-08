@@ -52,7 +52,8 @@ redis:
   persistence:
     enabled: true
     size: 5Gi
-    storageClassName: ""
+    # The EBS CSI driver provisions persistent volumes through this class.
+    storageClassName: gp3
   resources:
     requests:
       cpu: 50m
@@ -103,4 +104,3 @@ ingress:
         - path: /
           pathType: Prefix
   tls: []
-

@@ -26,8 +26,9 @@ step-by-step AWS bootstrap runbook remains in
 | Application container image | Built by the repository Dockerfile |
 | GitHub Actions validation | Enabled for pull requests and pushes to `main` |
 | Amazon ECR publishing | Enabled for successful pushes to `main` |
-| EKS cluster | Configured in the AWS Console; creation and activation are the next manual step |
-| Helm workload deployment | Manual bootstrap first; automation follows after validation |
+| EKS cluster | `synapse-dev` is active in `us-east-1` with one healthy managed node |
+| Load Balancer Controller | Installed with Helm and EKS Pod Identity; deployment is `2/2` Ready |
+| Helm workload deployment | `synapse` is deployed manually with an immutable ECR commit-SHA image |
 | Route 53 and custom DNS | Planned after the ALB has a stable hostname |
 
 ## Scope boundaries

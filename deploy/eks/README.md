@@ -52,8 +52,10 @@ After the cluster becomes **Active**:
 1. Open the cluster's **Compute** tab and choose **Add node group**.
 2. Name it `synapse-dev-nodes`.
 3. Use the console's **Create recommended role** option for the node IAM role.
-4. Use the default EKS-optimized Linux AMI.
-5. For a small development environment, start with one `t3.medium` node:
+4. Use the default EKS-optimized Linux AMI. The current development cluster
+   uses an `m7i-flex.large` node because the initial `t3.medium` node group
+   could not be created successfully.
+5. For a small development environment, start with one `m7i-flex.large` node:
    - desired: `1`
    - minimum: `1`
    - maximum: `2`
@@ -78,7 +80,16 @@ kubectl get nodes
 
 The node should report `Ready` before continuing.
 
-## 4. Install the AWS Load Balancer Controller
+## 4. Configure EBS storage
+
+The Redis StatefulSet uses the EBS CSI driver and an explicit `gp3` storage
+class. Apply it before installing the Helm release:
+
+```bash
+kubectl apply -f deploy/eks/storageclass-gp3.yaml
+```
+
+## 5. Install the AWS Load Balancer Controller
 
 Create the controller IAM role using the current AWS EKS guide, then install
 the controller with Helm. The controller is required for the chart's `alb`
@@ -94,7 +105,7 @@ Verify it before deploying Synapse:
 kubectl get deployment -n kube-system aws-load-balancer-controller
 ```
 
-## 5. Create the application Secret
+## 6. Create the application Secret
 
 Create this Secret in CloudShell or a trusted local terminal. Substitute the
 real values locally; never commit this command with real values or paste the
@@ -114,7 +125,7 @@ kubectl create secret generic synapse-secrets \
 The chart reads the Secret through `secrets.existingSecret`; it does not store
 these values in Git.
 
-## 6. Install the Synapse Helm release
+## 7. Install the Synapse Helm release
 
 Replace `<successful-git-sha>` with the commit SHA from the successful ECR
 workflow run:
@@ -138,4 +149,3 @@ kubectl get events -n synapse-dev --sort-by=.lastTimestamp
 
 The ALB may take a few minutes to provision. Once this manual deployment is
 healthy, the GitHub Actions workflow can safely gain an EKS deployment job.
-
