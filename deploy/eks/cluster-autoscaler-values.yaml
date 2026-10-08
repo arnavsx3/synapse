@@ -1,0 +1,32 @@
+# Values for the Cluster Autoscaler Helm chart.
+# The chart release currently lags Kubernetes 1.36, so the image is pinned
+# explicitly to the matching upstream Cluster Autoscaler image.
+cloudProvider: aws
+awsRegion: us-east-1
+
+autoDiscovery:
+  clusterName: synapse-dev
+
+image:
+  repository: registry.k8s.io/autoscaling/cluster-autoscaler
+  tag: v1.36.1
+  pullPolicy: IfNotPresent
+
+rbac:
+  serviceAccount:
+    create: true
+    name: cluster-autoscaler
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 300Mi
+  limits:
+    cpu: 200m
+    memory: 500Mi
+
+extraArgs:
+  balance-similar-node-groups: true
+  scan-interval: 30s
+  scale-down-delay-after-add: 10m
+  scale-down-unneeded-time: 10m

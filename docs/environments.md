@@ -15,13 +15,14 @@ convenient development default; override it during deployment with
 ```text
 namespace: synapse-dev
 host: synapes-dev.online
-app replicas: 1
-worker replicas: 1
-nginx replicas: 1
+app replicas: 1 (HPA min 1, max 3)
+worker replicas: 1 (HPA min 1, max 2)
+nginx replicas: 1 (HPA min 1, max 2)
 ```
 
 Development is intended for the first manual EKS deployment and cost-conscious
-testing.
+testing. CPU-based HPAs are enabled for the stateless workloads; the EKS node
+group can scale from one to two nodes through Cluster Autoscaler.
 
 ## Staging
 
@@ -32,9 +33,9 @@ worker replicas: 2
 nginx replicas: 2
 ```
 
-Staging values demonstrate a larger workload shape, but they do not imply that
-high availability, autoscaling, or production security hardening has been
-implemented yet.
+Staging values demonstrate a larger workload shape. Production security
+hardening, multi-node high availability, and a staging autoscaling policy still
+need separate decisions.
 
 ## Shared configuration
 

@@ -55,3 +55,11 @@ helm template synapse deploy/helm/synapse \
 
 Use the same overrides with `helm upgrade --install` after the EKS cluster and
 AWS Load Balancer Controller are ready.
+
+## Autoscaling
+
+The development values enable `autoscaling/v2` CPU HPAs for the Nginx, app, and
+worker Deployments. Each starts at one replica; the app can grow to three, and
+Nginx and the worker can grow to two. Metrics Server must be available for the
+HPA metrics to become active. Redis is intentionally not autoscaled because it
+is a persistent StatefulSet.

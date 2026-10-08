@@ -28,8 +28,13 @@ Restrict it when the cluster moves beyond this development setup.
 | CoreDNS | Kubernetes service discovery |
 | kube-proxy | Service networking on nodes |
 | EKS Pod Identity Agent | IAM roles for add-ons and workloads |
-| Metrics Server | Required later for HPA metrics |
+| Metrics Server | CPU metrics for the workload HPAs |
 | EBS CSI Driver | Persistent EBS volume for Redis |
+
+The development workload also uses the official Kubernetes Cluster Autoscaler
+to adjust the managed node group between one and two nodes when HPA-created
+pods cannot fit on the current node. See the autoscaling section in the
+[EKS runbook](../deploy/eks/README.md).
 
 The EBS CSI driver uses the Pod Identity role attached to
 `ebs-csi-controller-sa` with `AmazonEBSCSIDriverPolicyV2`. The VPC CNI uses the

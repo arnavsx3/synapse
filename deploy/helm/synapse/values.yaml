@@ -11,6 +11,11 @@ imagePullSecrets: []
 
 app:
   replicaCount: 1
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 3
+    targetCPUUtilizationPercentage: 70
   resources:
     requests:
       cpu: 250m
@@ -21,6 +26,11 @@ app:
 
 worker:
   replicaCount: 1
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 2
+    targetCPUUtilizationPercentage: 70
   resources:
     requests:
       cpu: 250m
@@ -36,6 +46,11 @@ nginx:
     tag: 1.27-alpine
     pullPolicy: IfNotPresent
   replicaCount: 1
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 2
+    targetCPUUtilizationPercentage: 70
   resources:
     requests:
       cpu: 50m

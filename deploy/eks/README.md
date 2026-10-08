@@ -64,6 +64,12 @@ After the cluster becomes **Active**:
 Managed nodes are EC2 instances, so they continue to incur EC2 and EKS costs
 while the environment is running. See the [managed node group guide](https://docs.aws.amazon.com/eks/latest/userguide/managed-node-groups.html).
 
+The node group's minimum, desired, and maximum values are not autoscaling by
+themselves. The Cluster Autoscaler deployment below watches for unscheduled
+pods and changes the node group's desired count between 1 and 2. The managed
+node group's autoscaling tags are already present on the AWS Auto Scaling
+Group; do not remove them.
+
 ## 3. Connect to the cluster from CloudShell
 
 The AWS Console creates the cluster, but Helm and Kubernetes resources are
@@ -150,3 +156,65 @@ kubectl get events -n synapse-dev --sort-by=.lastTimestamp
 
 The ALB may take a few minutes to provision. Once this manual deployment is
 healthy, the GitHub Actions workflow can safely gain an EKS deployment job.
+
+## 8. Enable workload and node autoscaling
+
+The Helm chart enables CPU-based Horizontal Pod Autoscalers for the stateless
+Nginx, app, and BullMQ worker Deployments in `values-dev.yaml`. Redis remains a
+single StatefulSet because it owns persistent state and should not be scaled by
+duplicating pods. Metrics Server supplies the CPU data used by these HPAs.
+
+Create the dedicated Pod Identity role and policy once:
+
+```bash
+aws iam create-policy \
+  --policy-name AmazonEKSClusterAutoscalerPolicy \
+  --policy-document file://deploy/eks/cluster-autoscaler-policy.json
+
+aws iam create-role \
+  --role-name AmazonEKSClusterAutoscalerRole \
+  --assume-role-policy-document file://deploy/eks/cluster-autoscaler-trust-policy.json
+
+aws iam attach-role-policy \
+  --role-name AmazonEKSClusterAutoscalerRole \
+  --policy-arn arn:aws:iam::161012475209:policy/AmazonEKSClusterAutoscalerPolicy
+
+aws eks create-pod-identity-association \
+  --cluster-name synapse-dev \
+  --region us-east-1 \
+  --role-arn arn:aws:iam::161012475209:role/AmazonEKSClusterAutoscalerRole \
+  --namespace kube-system \
+  --service-account cluster-autoscaler
+```
+
+Install the official Cluster Autoscaler chart. The values file pins the image
+to the Kubernetes 1.36-compatible upstream image and discovers the managed node
+group from its AWS tags:
+
+```bash
+helm repo add autoscaler https://kubernetes.github.io/autoscaler
+helm repo update
+
+helm upgrade --install cluster-autoscaler autoscaler/cluster-autoscaler \
+  --version 9.59.0 \
+  --namespace kube-system \
+  -f deploy/eks/cluster-autoscaler-values.yaml \
+  --wait
+```
+
+Verify both layers:
+
+```bash
+kubectl get hpa -n synapse-dev
+kubectl get deployment cluster-autoscaler -n kube-system
+kubectl logs deployment/cluster-autoscaler -n kube-system --tail=100
+aws eks describe-nodegroup --cluster-name synapse-dev \
+  --nodegroup-name synapse-dev-nodes --region us-east-1 \
+  --query 'nodegroup.scalingConfig'
+```
+
+The current low-traffic environment should stay at one app replica and one
+node. During load, HPA adds pods; if those pods cannot fit, Cluster Autoscaler
+raises the node group's desired count up to two. If the node group is replaced,
+refresh the Auto Scaling Group ARN in `cluster-autoscaler-policy.json` and the
+IAM policy before relying on node scale-up again.
