@@ -1,106 +1,203 @@
 # Synapse
 
-Synapse is a context-first chat arcade. Add text or upload `.txt`, `.md`, PDF, or `.docx` files, then chat with an assistant grounded in that context.
+[![CI/CD](https://github.com/arnavsx3/synapse/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/arnavsx3/synapse/actions/workflows/ci-cd.yml)
+[![Next.js](https://img.shields.io/badge/Next.js-App%20Router-black?logo=next.js)](https://nextjs.org/)
+[![Kubernetes](https://img.shields.io/badge/Kubernetes-EKS-326CE5?logo=kubernetes&logoColor=white)](https://aws.amazon.com/eks/)
+[![License](https://img.shields.io/badge/license-private-lightgrey)](#)
 
-## Product shape
+> A context-first chat arcade for turning documents into useful conversations.
 
-The app intentionally has only two pages:
+Synapse lets a user paste text or upload `.txt`, `.md`, PDF, or `.docx` files,
+then chat with an assistant grounded in that context. It is deliberately small
+as a product and deliberately complete as a delivery exercise: the same code
+that runs locally is tested, containerised, published to Amazon ECR, and
+deployed to Amazon EKS through Helm and GitHub Actions.
 
-- `/` — the arcade-themed context console for pasting text, uploading files, and managing memory.
-- `/chat` — the chat console with loaded context visible beside the conversation.
+## What makes Synapse useful
 
-There are no accounts, workspaces, projects, workflows, or custom server layer.
+- Context ingestion with document extraction, chunking, offsets, and source metadata.
+- Semantic retrieval through OpenRouter embeddings with keyword fallback when hosted inference is unavailable.
+- Chat responses with visible retrieval sources instead of opaque context injection.
+- Asynchronous embedding jobs through BullMQ and Redis.
+- Explicit indexing states: `pending`, `processing`, `completed`, and `failed`.
+- Graceful worker shutdown, retries, backoff, and inspectable failures.
+- A compact two-page interface: the context console at `/` and chat at `/chat`.
 
-## Architecture
+## The system at a glance
 
-```text
-Browser → Nginx → Next.js App Router → Postgres
-                              ├──────→ Redis → embedding worker
-                              └──────→ OpenRouter-compatible AI APIs
+```mermaid
+flowchart LR
+    User((User)) --> DNS[Route 53]
+    DNS --> ALB[Application Load Balancer]
+    ALB --> Nginx[Nginx]
+    Nginx --> App[Next.js app]
+    App --> DB[(Neon PostgreSQL)]
+    App --> Redis[(Redis)]
+    App --> AI[OpenRouter]
+    Redis --> Worker[BullMQ worker]
+    Worker --> DB
+    Worker --> AI
 ```
 
-- Next.js App Router serves the UI and route handlers.
-- Nginx is the local reverse proxy and the future Kubernetes ingress edge.
-- Postgres stores context items, embeddings, and chat messages.
-- Redis and BullMQ process context embeddings asynchronously.
-- Redis uses AOF persistence in Compose; embedding jobs retry four times with exponential backoff, retain recent failures for inspection, and are processed by a gracefully shutting-down worker with configurable concurrency.
-- The RAG pipeline chunks each document with overlap, stores character offsets and source metadata, and embeds each chunk independently.
-- Retrieval returns diverse chunk-level matches with source references. If embeddings are pending, unavailable, rate-limited, or over quota, it switches to weighted keyword search and reports the degraded mode.
-- Context items expose `pending`, `processing`, `completed`, and `failed` embedding status so indexing failures are visible instead of silently disappearing.
-- Chat uses OpenRouter's OpenAI-compatible API. The default `openrouter/free` route selects an available free chat model; the model and endpoint are configurable.
+The public path ends at Nginx. Redis, the worker, and the database are internal
+service boundaries; they are never exposed through the public ingress.
 
-## Local setup
+## Delivery architecture
 
-1. Copy `.env.example` to `.env`.
-2. Add the fresh development `DATABASE_URL`.
-3. Create an OpenRouter API key and set `OPENROUTER_API_KEY` (or the separate `LLM_API_KEY` and `EMBEDDING_API_KEY` variables).
-4. The default embedding route is NVIDIA's free `nvidia/nemotron-3-embed-1b:free` model with 2,048 dimensions. OpenRouter free routes are rate-limited and their availability can change.
-5. Tune `EMBEDDING_WORKER_CONCURRENCY` if the embedding provider allows more or fewer concurrent requests.
+```mermaid
+flowchart LR
+    Commit[Push to main] --> Checks[Tests · lint · TypeScript · build · Helm lint]
+    Checks --> Image[Build immutable image]
+    Image --> ECR[(Amazon ECR)]
+    Image --> Deploy[Helm deploy to EKS]
+    Deploy --> HPA[HPA scales pods]
+    HPA --> CA[Cluster Autoscaler]
+    CA --> Nodes[Managed node group: 1–2 nodes]
+```
 
-Apply the migrations before starting the app against an existing database:
+Pull requests run validation only. A successful push to `main` publishes both
+the full commit SHA and `latest`, then deploys the full SHA to the development
+cluster. The deployment never relies on a moving tag.
+
+## Local development
+
+### Prerequisites
+
+- Node.js 20+
+- npm
+- Docker Desktop or Docker Engine with Compose
+- A development PostgreSQL database, such as Neon
+- An OpenRouter API key for hosted chat and embeddings
+
+### Environment
 
 ```bash
-npm run db:migrate
+cp .env.example .env
 ```
 
-The latest migration changes the vector dimension for the OpenRouter embedding model and marks stored context as pending. Existing vectors are intentionally discarded because vectors from different embedding models cannot be mixed; pending contexts are re-indexed when their embedding jobs are queued again.
+Set `DATABASE_URL` and `OPENROUTER_API_KEY` in `.env`. The separate
+`LLM_API_KEY` and `EMBEDDING_API_KEY` variables are optional; when empty, the
+application falls back to the OpenRouter key.
 
-OpenRouter's free routes are rate-limited and model availability can change. Do not send confidential or personal data to free provider endpoints.
+Never commit `.env`, database URLs, API keys, AWS access keys, or Kubernetes
+Secret values.
 
-Install and run the app directly:
+### Run the application
 
 ```bash
 npm install
+npm run db:migrate
 npm run dev
 ```
 
-Run the worker separately when using Redis:
+Run the embedding worker separately when using Redis:
 
 ```bash
 npm run worker
 ```
 
-Run the automated checks:
-
-```bash
-npm test
-npm run lint
-npx tsc --noEmit
-```
-
-## Docker Compose
-
-Compose runs Nginx, the standalone Next.js image, the context embedding worker, and Redis:
+Run the complete local boundary with Docker Compose:
 
 ```bash
 docker compose up --build
 ```
 
-Open [http://localhost:3000](http://localhost:3000). Nginx is the only exposed application service.
+Then open [http://localhost:3000](http://localhost:3000). Nginx is the only
+application service exposed by the Compose stack.
 
-### Hosted inference fallback
-
-Hosted inference still depends on provider availability and rate limits. A `402` or quota response marks semantic retrieval as quota-limited and activates keyword retrieval; a `429` response reports rate limiting and does the same. If the chat provider is unavailable, Synapse stores a local response with the retrieval sources and a warning instead of failing the request entirely.
-
-## Useful scripts
+### Quality checks
 
 ```bash
-npm run dev
-npm run worker
-npm run build
-npm run start
+npm test
 npm run lint
+npx tsc --noEmit
+npm run build
+helm lint deploy/helm/synapse -f deploy/helm/synapse/values-dev.yaml
 ```
 
-## Next deployment targets
+## AWS deployment
 
-The container boundaries map directly to the planned EKS deployment: AWS Load Balancer Controller ingress, Nginx, the Synapse app, the context embedding worker, and Redis. The deployment configuration lives in `deploy/helm/synapse` with separate development and staging values. ECR image publishing is active, and the first EKS bootstrap is documented for manual execution before deployment automation is added.
+The live development shape is:
 
-The manual EKS bootstrap and deployment sequence is documented in [`deploy/eks/README.md`](deploy/eks/README.md).
+| Layer | Configuration |
+| --- | --- |
+| Region | `us-east-1` |
+| EKS cluster | `synapse-dev` |
+| Namespace | `synapse-dev` |
+| ECR repository | `synapse` |
+| Public domain | `synapes-dev.online` |
+| Ingress | AWS Load Balancer Controller → internet-facing ALB |
+| Storage | Default `gp3` EBS CSI class for Redis |
+| Workload scaling | HPA: app 1–3, worker 1–2, Nginx 1–2 |
+| Node scaling | Cluster Autoscaler: 1–2 managed nodes |
 
-For the project overview and the full DevOps delivery path, see the root
-[`docs/`](docs/README.md) documentation. It covers the architecture, GitHub
-Actions and ECR flow, EKS bootstrap, Helm deployment, Route 53, and environment
-values.
+The domain spelling is intentionally `synapes-dev.online` because that is the
+domain purchased for the demonstration environment. HTTPS is intentionally
+not part of the current scope; the current ALB listener is HTTP.
 
-ArgoCD/GitOps, infrastructure-as-code, managed Redis, security hardening, advanced observability, disaster recovery, and multi-region deployment are intentionally deferred.
+The one-time bootstrap process is documented in
+[`deploy/eks/README.md`](deploy/eks/README.md). After the cluster, secret,
+storage class, and controllers exist, normal pushes to `main` deploy
+automatically.
+
+## CI/CD flow
+
+The workflow lives at [`.github/workflows/ci-cd.yml`](.github/workflows/ci-cd.yml).
+
+### Pull request
+
+1. Install the locked npm dependencies.
+2. Run tests, lint, TypeScript validation, and the production build.
+3. Lint the Helm chart.
+
+### Push to `main`
+
+1. Repeat all validation checks.
+2. Authenticate to AWS with GitHub OIDC and no stored AWS keys.
+3. Build and publish the image to ECR under the commit SHA and `latest`.
+4. Configure Kubernetes access to the `synapse-dev` cluster.
+5. Run `helm upgrade --install` with the exact commit SHA.
+6. Wait for the app, worker, and Nginx rollouts to complete.
+
+The GitHub role is restricted to this repository's `main` branch. Its EKS
+access is namespace-scoped to `synapse-dev`; it is not a cluster administrator.
+See [`docs/github-actions.md`](docs/github-actions.md) for the AWS access
+configuration and troubleshooting notes.
+
+## Repository map
+
+```text
+app/                    Next.js pages and route handlers
+lib/                    Database, RAG, AI, and queue modules
+docker-compose.yml      Local Nginx, app, worker, and Redis stack
+Dockerfile              Production application image
+nginx/                  Local and container reverse-proxy configuration
+deploy/helm/synapse/    Helm chart and environment values
+deploy/eks/             EKS bootstrap, IAM policies, and autoscaling runbooks
+docs/                   Architecture, operations, and delivery documentation
+.github/workflows/      CI/CD automation
+```
+
+## Documentation
+
+- [Architecture](docs/architecture.md)
+- [GitHub Actions and ECR](docs/github-actions.md)
+- [EKS deployment guide](docs/eks-deployment.md)
+- [EKS bootstrap runbook](deploy/eks/README.md)
+- [Helm chart reference](deploy/helm/synapse/README.md)
+- [Environment values](docs/environments.md)
+
+## Deliberate scope boundaries
+
+Included: the application, Docker Compose, Amazon ECR, Amazon EKS, Helm, AWS
+Load Balancer Controller, Route 53, workload and node autoscaling, and GitHub
+Actions deployment automation.
+
+Currently deferred: HTTPS/ACM, advanced security hardening, Terraform/OpenTofu,
+ArgoCD/GitOps, managed Redis, advanced observability, disaster recovery,
+multi-region deployment, and production-grade high availability.
+
+For a short-lived demonstration environment, delete the EKS cluster and its
+node group after testing. Also remove the ALB, Redis EBS volume, Route 53 hosted
+zone, unused ECR images, and Synapse-specific IAM resources when the demo is
+finished.

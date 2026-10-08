@@ -8,8 +8,8 @@ and a Helm-managed deployment on Amazon EKS.
 ## Start here
 
 - [Architecture](architecture.md) — application and AWS component relationships.
-- [GitHub Actions and ECR](github-actions.md) — CI checks, OIDC authentication,
-  image tags, and the current delivery boundary.
+- [GitHub Actions, ECR, and EKS](github-actions.md) — CI checks, OIDC
+  authentication, image tags, namespace-scoped deployment, and rollouts.
 - [EKS deployment](eks-deployment.md) — cluster prerequisites, add-ons, node
   group, Load Balancer Controller, secrets, Helm, and Route 53.
 - [Environment values](environments.md) — development and staging conventions.
@@ -28,16 +28,18 @@ step-by-step AWS bootstrap runbook remains in
 | Amazon ECR publishing | Enabled for successful pushes to `main` |
 | EKS cluster | `synapse-dev` is active in `us-east-1` with one healthy managed node |
 | Load Balancer Controller | Installed with Helm and EKS Pod Identity; deployment is `2/2` Ready |
-| Helm workload deployment | `synapse` is deployed manually with an immutable ECR commit-SHA image |
-| Route 53 and custom DNS | Planned after the ALB has a stable hostname |
+| Helm workload deployment | Automated on successful pushes to `main` with an immutable ECR commit-SHA image |
+| Route 53 and custom DNS | Hosted zone and ALB alias configured for `synapes-dev.online` |
+| Workload and node autoscaling | HPA plus Cluster Autoscaler enabled for development |
 
 ## Scope boundaries
 
 Included: Amazon ECR, Amazon EKS, Kubernetes manifests, Helm, Neon PostgreSQL,
-AWS Load Balancer Controller, Route 53, and GitHub Actions.
+AWS Load Balancer Controller, Route 53, workload/node autoscaling, and GitHub
+Actions deployment automation.
 
-Deferred: ArgoCD/GitOps, Terraform/OpenTofu, RDS, ElastiCache, security
-hardening, disaster recovery, advanced observability, and multi-region
+Deferred: HTTPS/ACM, ArgoCD/GitOps, Terraform/OpenTofu, RDS, ElastiCache,
+security hardening, disaster recovery, advanced observability, and multi-region
 deployment.
 
 Never commit `.env`, database URLs, API keys, Kubernetes Secret values, or AWS

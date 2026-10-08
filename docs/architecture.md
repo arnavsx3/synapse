@@ -60,6 +60,8 @@ their upstream public images; they are not built by the Synapse image workflow.
 | Ingress | AWS Load Balancer Controller with an internet-facing ALB |
 | DNS | Route 53 alias record to the ALB |
 | Database | Neon PostgreSQL, external to AWS |
+| Delivery | GitHub Actions → ECR → Helm → EKS |
+| Scaling | HPA for stateless workloads; Cluster Autoscaler for 1–2 nodes |
 
 ## Deliberate portfolio trade-offs
 

@@ -1,7 +1,8 @@
-# EKS deployment guide
+# EKS deployment and CI guide
 
-This guide describes the manual first deployment of Synapse. The detailed
-command sequence is also available in [`deploy/eks/README.md`](../deploy/eks/README.md).
+This guide describes the one-time EKS bootstrap and the automated deployment
+that follows it. The detailed bootstrap sequence is also available in
+[`deploy/eks/README.md`](../deploy/eks/README.md).
 
 ## Cluster configuration
 
@@ -132,7 +133,9 @@ kubectl get ingress -n synapse-dev
 kubectl get events -n synapse-dev --sort-by=.lastTimestamp
 ```
 
-The ALB hostname may take several minutes to appear.
+The ALB hostname may take several minutes to appear. After this first manual
+deployment is healthy, later pushes to `main` are handled by the `deploy-dev`
+GitHub Actions job.
 
 ### 7. Add Route 53 DNS
 
@@ -146,9 +149,10 @@ After the ALB is healthy:
 Route 53 is the DNS layer; the ALB remains the public entry point for the EKS
 workload.
 
-## Follow-up automation
+## CI/CD after bootstrap
 
-After the manual deployment is verified, add an EKS deployment job to GitHub
-Actions. It should deploy the successful commit SHA, not rebuild a different
-image and not place secrets in the workflow file. ArgoCD/GitOps is intentionally
+The GitHub Actions deploy job uses the successful commit SHA already published
+to ECR. It does not rebuild a different image and does not place secrets in the
+workflow file. See [`docs/github-actions.md`](github-actions.md) for the OIDC
+role and namespace-scoped EKS access entry. ArgoCD/GitOps is intentionally
 outside the current scope.

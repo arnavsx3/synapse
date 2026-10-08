@@ -1,7 +1,8 @@
 # Synapse EKS deployment runbook
 
-This runbook bootstraps the first development EKS environment before cluster
-deployment is added to GitHub Actions.
+This runbook bootstraps the first development EKS environment. Once the
+one-time resources below exist, GitHub Actions deploys future commits
+automatically.
 
 ## Known deployment values
 
@@ -155,7 +156,9 @@ kubectl get events -n synapse-dev --sort-by=.lastTimestamp
 ```
 
 The ALB may take a few minutes to provision. Once this manual deployment is
-healthy, the GitHub Actions workflow can safely gain an EKS deployment job.
+healthy, future pushes to `main` are deployed by the GitHub Actions `deploy-dev`
+job. See [`docs/github-actions.md`](../../docs/github-actions.md) for the
+workflow's OIDC and namespace-scoped EKS access setup.
 
 ## 8. Enable workload and node autoscaling
 

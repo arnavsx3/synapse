@@ -19,6 +19,9 @@ env:
   AWS_REGION: us-east-1
   AWS_ROLE_ARN: arn:aws:iam::161012475209:role/synapse-github-actions-ecr
   ECR_REPOSITORY: synapse
+  EKS_CLUSTER_NAME: synapse-dev
+  KUBE_NAMESPACE: synapse-dev
+  HELM_RELEASE: synapse
 
 jobs:
   validate:
@@ -45,6 +48,14 @@ jobs:
 
       - name: Run TypeScript check
         run: npx tsc --noEmit
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.17.0
+
+      - name: Lint Helm chart
+        run: helm lint deploy/helm/synapse -f deploy/helm/synapse/values-dev.yaml
 
       - name: Build application
         run: npm run build
@@ -85,3 +96,53 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+  deploy-dev:
+    name: Deploy development to EKS
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: publish-image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials with OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: v1.36.0
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.17.0
+
+      - name: Configure Kubernetes access
+        run: aws eks update-kubeconfig --region "$AWS_REGION" --name "$EKS_CLUSTER_NAME"
+
+      - name: Verify namespace-scoped deploy access
+        run: kubectl auth can-i get deployments --namespace "$KUBE_NAMESPACE"
+
+      - name: Deploy immutable image with Helm
+        run: |
+          helm upgrade --install "$HELM_RELEASE" deploy/helm/synapse \
+            --namespace "$KUBE_NAMESPACE" \
+            --values deploy/helm/synapse/values-dev.yaml \
+            --set-string image.tag="$GITHUB_SHA" \
+            --set-string secrets.existingSecret=synapse-secrets \
+            --wait \
+            --timeout 10m
+
+      - name: Verify rollout
+        run: |
+          kubectl rollout status deployment/synapse-synapse-app --namespace "$KUBE_NAMESPACE" --timeout=5m
+          kubectl rollout status deployment/synapse-synapse-worker --namespace "$KUBE_NAMESPACE" --timeout=5m
+          kubectl rollout status deployment/synapse-synapse-nginx --namespace "$KUBE_NAMESPACE" --timeout=5m
+          kubectl get ingress --namespace "$KUBE_NAMESPACE"

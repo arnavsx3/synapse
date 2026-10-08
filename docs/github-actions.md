@@ -1,4 +1,4 @@
-# GitHub Actions and Amazon ECR
+# GitHub Actions, Amazon ECR, and Amazon EKS
 
 The workflow is defined in
 [`.github/workflows/ci-cd.yml`](../.github/workflows/ci-cd.yml). GitHub Actions
@@ -14,6 +14,7 @@ Pull request → main
 Push → main
   ├─ validate
   └─ publish-image (only after validate succeeds)
+       └─ deploy-dev (only after publish-image succeeds)
 ```
 
 The workflow uses a concurrency group so a newer run can cancel an older run
@@ -53,14 +54,26 @@ The ECR image may appear as an image index, an image, and a small BuildKit
 attestation record. Those records represent one build, not separate Synapse,
 Redis, and Nginx services.
 
-## AWS identity model
+## ECR and EKS identity model
 
 The workflow does not store a long-lived AWS access key in GitHub. The IAM role
 trusts the GitHub OIDC provider and is restricted to this repository's `main`
 branch. Its permissions are limited to authenticating to ECR and pushing or
 reading layers in the `synapse` repository.
 
-The GitHub Actions role is separate from:
+The same short-lived OIDC role is used by the image and deployment jobs. It has:
+
+- ECR permissions for the `synapse` repository;
+- `eks:DescribeCluster` for `synapse-dev`;
+- an EKS access entry associated with `AmazonEKSAdminPolicy`, scoped only to the
+  `synapse-dev` namespace.
+
+The access entry is Kubernetes authorization, while the IAM policy is AWS API
+authorization. Both are required: IAM lets the runner discover the cluster,
+and the EKS access entry lets its generated Kubernetes token manage the
+namespace.
+
+The GitHub Actions role is still separate from:
 
 - the EKS cluster IAM role;
 - the future managed node-group IAM role;
@@ -71,22 +84,64 @@ The GitHub Actions role is separate from:
 Do not reuse the GitHub Actions role for Kubernetes add-ons or application
 workloads.
 
-## Current automation boundary
+## EKS deployment job
 
-The workflow currently validates code and publishes the container image. It does
-not yet deploy to EKS. The first deployment is intentionally manual so the
-cluster, node group, Load Balancer Controller, Secrets, and Helm values can be
-verified. Once that bootstrap is healthy, an EKS deployment job can be added to
-the workflow using the immutable commit-SHA image tag.
+The `deploy-dev` job runs only after `publish-image` succeeds. It:
+
+1. Assumes the same OIDC role without storing AWS keys in GitHub.
+2. Runs `aws eks update-kubeconfig` for `synapse-dev`.
+3. Verifies that the role can read deployments in `synapse-dev`.
+4. Runs Helm with `values-dev.yaml`, the existing runtime Secret, and
+   `github.sha` as the immutable image tag.
+5. Waits for the app, worker, and Nginx Deployments to roll out.
+6. Prints the current Ingress address for the deployment log.
+
+The namespace and Secret must already exist from the one-time EKS bootstrap.
+The workflow intentionally does not create or print application secrets.
+
+The deploy job uses the same commit SHA that was published by `publish-image`,
+so a successful run has a direct source-to-image-to-cluster relationship.
+
+## One-time AWS authorization
+
+The deploy role's cluster-discovery permission is documented in
+[`deploy/eks/github-actions-eks-policy.json`](../deploy/eks/github-actions-eks-policy.json).
+The EKS access entry can be recreated with:
+
+```bash
+ROLE_ARN=arn:aws:iam::161012475209:role/synapse-github-actions-ecr
+
+aws iam put-role-policy \
+  --role-name synapse-github-actions-ecr \
+  --policy-name SynapseEKSDescribeCluster \
+  --policy-document file://deploy/eks/github-actions-eks-policy.json
+
+aws eks create-access-entry \
+  --cluster-name synapse-dev \
+  --region us-east-1 \
+  --principal-arn "$ROLE_ARN" \
+  --type STANDARD
+
+aws eks associate-access-policy \
+  --cluster-name synapse-dev \
+  --region us-east-1 \
+  --principal-arn "$ROLE_ARN" \
+  --policy-arn arn:aws:eks::aws:cluster-access-policy/AmazonEKSAdminPolicy \
+  --access-scope type=namespace,namespaces=synapse-dev
+```
+
+Do not broaden the access scope to the whole cluster for this development
+pipeline.
 
 ## Useful checks
 
 From the GitHub repository:
 
 1. Open **Actions → Synapse CI/CD**.
-2. Inspect the `validate` job and then `publish-image` for a push to `main`.
+2. Inspect `validate`, `publish-image`, and `deploy-dev` for a push to `main`.
 3. In ECR, confirm the repository contains the commit SHA tag and `latest`.
-4. Prefer the commit SHA tag when installing Helm.
+4. Confirm the three rollout checks pass and the Ingress is present.
+5. Prefer the commit SHA tag for any manual Helm operation.
 
 Never put `DATABASE_URL`, `OPENROUTER_API_KEY`, or Kubernetes Secret values in
 workflow logs, repository variables, documentation, or image layers.
