@@ -23,7 +23,8 @@ docker build -t "$ECR_REPOSITORY:$IMAGE_TAG" .
 docker tag "$ECR_REPOSITORY:$IMAGE_TAG" "$ECR_REPOSITORY:dev"
 ```
 
-The ECR repository and push workflow will be added separately. Do not put AWS
+The ECR repository and push workflow are documented in
+[`docs/github-actions.md`](../../../docs/github-actions.md). Do not put AWS
 credentials or application secrets in this chart.
 
 ## Configure secrets
@@ -54,4 +55,3 @@ helm template synapse deploy/helm/synapse \
 
 Use the same overrides with `helm upgrade --install` after the EKS cluster and
 AWS Load Balancer Controller are ready.
-
