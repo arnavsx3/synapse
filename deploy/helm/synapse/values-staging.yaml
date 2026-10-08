@@ -1,0 +1,22 @@
+global:
+  environment: staging
+
+image:
+  tag: staging
+
+app:
+  replicaCount: 2
+
+worker:
+  replicaCount: 2
+
+nginx:
+  replicaCount: 2
+
+ingress:
+  hosts:
+    - host: staging.synapse.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+

@@ -94,4 +94,6 @@ npm run lint
 
 ## Next deployment targets
 
-The container boundaries map directly to the planned EKS deployment: Nginx ingress, Synapse app, context embedding worker, and Redis. Kubernetes manifests and ArgoCD GitOps configuration will follow after the local core is stable.
+The container boundaries map directly to the planned EKS deployment: AWS Load Balancer Controller ingress, Nginx, the Synapse app, the context embedding worker, and Redis. The initial deployment configuration lives in `deploy/helm/synapse` with separate development and staging values. ECR image publishing, EKS bootstrap, and GitHub Actions delivery will build on this chart.
+
+ArgoCD/GitOps, infrastructure-as-code, managed Redis, security hardening, advanced observability, disaster recovery, and multi-region deployment are intentionally deferred.

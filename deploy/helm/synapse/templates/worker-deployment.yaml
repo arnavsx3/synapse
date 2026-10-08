@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "synapse.fullname" . }}-worker
+  labels:
+    {{- include "synapse.labels" . | nindent 4 }}
+    app.kubernetes.io/component: worker
+spec:
+  replicas: {{ .Values.worker.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "synapse.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: worker
+  template:
+    metadata:
+      labels:
+        {{- include "synapse.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: worker
+    spec:
+      terminationGracePeriodSeconds: {{ .Values.worker.terminationGracePeriodSeconds }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: worker
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["npm", "run", "worker"]
+          envFrom:
+            - configMapRef:
+                name: {{ include "synapse.fullname" . }}-env
+            {{- if or .Values.secrets.create .Values.secrets.existingSecret }}
+            - secretRef:
+                name: {{ if .Values.secrets.create }}{{ include "synapse.fullname" . }}-secrets{{ else }}{{ .Values.secrets.existingSecret }}{{ end }}
+                optional: true
+            {{- end }}
+          resources:
+            {{- toYaml .Values.worker.resources | nindent 12 }}

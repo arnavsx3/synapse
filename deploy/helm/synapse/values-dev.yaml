@@ -1,0 +1,22 @@
+global:
+  environment: dev
+
+image:
+  tag: dev
+
+app:
+  replicaCount: 1
+
+worker:
+  replicaCount: 1
+
+nginx:
+  replicaCount: 1
+
+ingress:
+  hosts:
+    - host: dev.synapse.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+

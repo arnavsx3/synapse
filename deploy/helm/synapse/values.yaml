@@ -1,0 +1,106 @@
+global:
+  environment: dev
+
+image:
+  # Override this with the ECR repository for the target AWS account and region.
+  repository: REPLACE_WITH_AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/synapse
+  tag: dev
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+app:
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+
+worker:
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+  terminationGracePeriodSeconds: 120
+
+nginx:
+  image:
+    repository: nginx
+    tag: 1.27-alpine
+    pullPolicy: IfNotPresent
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+
+redis:
+  image:
+    repository: redis
+    tag: 7-alpine
+    pullPolicy: IfNotPresent
+  persistence:
+    enabled: true
+    size: 5Gi
+    storageClassName: ""
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 250m
+      memory: 512Mi
+
+service:
+  app:
+    port: 3000
+  nginx:
+    port: 80
+
+env:
+  OPENROUTER_BASE_URL: https://openrouter.ai/api/v1
+  LLM_API_URL: https://openrouter.ai/api/v1/chat/completions
+  LLM_MODEL: openrouter/free
+  EMBEDDING_API_URL: https://openrouter.ai/api/v1/embeddings
+  EMBEDDING_MODEL: nvidia/nemotron-3-embed-1b:free
+  EMBEDDING_DIMENSIONS: "2048"
+  REDIS_URL: ""
+  EMBEDDING_WORKER_CONCURRENCY: "2"
+  RAG_CHUNK_SIZE: "1200"
+  RAG_CHUNK_OVERLAP: "200"
+  RAG_RETRIEVAL_LIMIT: "8"
+  RAG_MAX_CHUNKS_PER_CONTEXT: "2"
+  RAG_MINIMUM_SIMILARITY: "0.2"
+  RAG_MAX_QUERY_LENGTH: "2000"
+
+secrets:
+  # Prefer an externally managed Secret. The chart never needs secret values in Git.
+  existingSecret: ""
+  create: false
+  data: {}
+
+ingress:
+  enabled: true
+  className: alb
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80}]'
+    alb.ingress.kubernetes.io/healthcheck-path: /
+  hosts:
+    - host: dev.synapse.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
