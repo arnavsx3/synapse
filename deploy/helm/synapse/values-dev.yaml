@@ -2,7 +2,8 @@ global:
   environment: dev
 
 image:
-  tag: dev
+  repository: 161012475209.dkr.ecr.us-east-1.amazonaws.com/synapse
+  tag: latest
 
 app:
   replicaCount: 1
@@ -19,4 +20,3 @@ ingress:
       paths:
         - path: /
           pathType: Prefix
-

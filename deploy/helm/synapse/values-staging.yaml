@@ -2,7 +2,8 @@ global:
   environment: staging
 
 image:
-  tag: staging
+  repository: 161012475209.dkr.ecr.us-east-1.amazonaws.com/synapse
+  tag: latest
 
 app:
   replicaCount: 2
@@ -19,4 +20,3 @@ ingress:
       paths:
         - path: /
           pathType: Prefix
-

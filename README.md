@@ -96,4 +96,6 @@ npm run lint
 
 The container boundaries map directly to the planned EKS deployment: AWS Load Balancer Controller ingress, Nginx, the Synapse app, the context embedding worker, and Redis. The initial deployment configuration lives in `deploy/helm/synapse` with separate development and staging values. ECR image publishing, EKS bootstrap, and GitHub Actions delivery will build on this chart.
 
+The manual EKS bootstrap and deployment sequence is documented in [`deploy/eks/README.md`](deploy/eks/README.md).
+
 ArgoCD/GitOps, infrastructure-as-code, managed Redis, security hardening, advanced observability, disaster recovery, and multi-region deployment are intentionally deferred.
