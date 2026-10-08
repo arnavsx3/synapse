@@ -14,7 +14,7 @@ convenient development default; override it during deployment with
 
 ```text
 namespace: synapse-dev
-host: dev.synapse.example.com
+host: synapes-dev.online
 app replicas: 1
 worker replicas: 1
 nginx replicas: 1
