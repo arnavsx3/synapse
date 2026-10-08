@@ -4,6 +4,8 @@ metadata:
   name: gp3
   labels:
     app.kubernetes.io/part-of: synapse
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "true"
 provisioner: ebs.csi.aws.com
 allowVolumeExpansion: true
 reclaimPolicy: Delete

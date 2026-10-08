@@ -52,8 +52,8 @@ redis:
   persistence:
     enabled: true
     size: 5Gi
-    # The EBS CSI driver provisions persistent volumes through this class.
-    storageClassName: gp3
+    # The cluster's gp3 EBS CSI class is the default storage class.
+    storageClassName: ""
   resources:
     requests:
       cpu: 50m

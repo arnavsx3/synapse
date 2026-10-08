@@ -82,8 +82,9 @@ The node should report `Ready` before continuing.
 
 ## 4. Configure EBS storage
 
-The Redis StatefulSet uses the EBS CSI driver and an explicit `gp3` storage
-class. Apply it before installing the Helm release:
+The Redis StatefulSet uses the EBS CSI driver. This manifest installs `gp3` as
+the cluster's default storage class. Apply it before installing the Helm
+release:
 
 ```bash
 kubectl apply -f deploy/eks/storageclass-gp3.yaml
